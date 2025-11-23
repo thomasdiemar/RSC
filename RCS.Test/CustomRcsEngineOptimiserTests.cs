@@ -28,6 +28,8 @@ namespace ThrusterOptimizationTests
         [TestMethod] public void MaxTz_MatchesMsf() => AssertOptimisersMatch(new RcsVector(), new RcsVector(0, 0, 1));
         [TestMethod] public void MinTz_MatchesMsf() => AssertOptimisersMatch(new RcsVector(), new RcsVector(0, 0, -1));
 
+        [TestMethod] public void ThreeFx_Thrusters_MaxFx_MatchesMsf() => AssertOptimisersMatch3Fx(new RcsVector(1, 0, 0), new RcsVector());
+
         private void AssertOptimisersMatch(RcsVector desiredForce, RcsVector desiredTorque)
         {
             var engine = new RcsEngine(ThrusterTestData.CreateThrusters());
@@ -52,6 +54,28 @@ namespace ThrusterOptimizationTests
             Assert.AreEqual(msfResult.ResultantTorque.X, customResult.ResultantTorque.X, tolerance, "Tx mismatch");
             Assert.AreEqual(msfResult.ResultantTorque.Y, customResult.ResultantTorque.Y, tolerance, "Ty mismatch");
             Assert.AreEqual(msfResult.ResultantTorque.Z, customResult.ResultantTorque.Z, tolerance, "Tz mismatch");
+        }
+
+        private void AssertOptimisersMatch3Fx(RcsVector desiredForce, RcsVector desiredTorque)
+        {
+            var engine = new RcsEngine(ThrusterTestData.CreateThrusters3Fx());
+            var command = new RcsCommand(desiredForce, desiredTorque);
+
+            var customResult = customOptimiser.Optimise(engine, command);
+            var msfResult = mfsOptimiser.Optimise(engine, command);
+
+            LogResult("Custom Optimiser (3Fx)", customResult);
+            LogResult("MSF Optimiser (3Fx)", msfResult);
+
+            const double tolerance = 1e-6;
+            foreach (var kvp in customResult.ThrusterOutputs)
+            {
+                double expected = msfResult.ThrusterOutputs[kvp.Key];
+                Assert.AreEqual(expected, kvp.Value, tolerance, $"Thruster {kvp.Key} mismatch");
+            }
+
+            Assert.AreEqual(msfResult.ResultantForce.X, customResult.ResultantForce.X, tolerance, "Fx mismatch");
+            Assert.AreEqual(msfResult.ResultantTorque.X, customResult.ResultantTorque.X, tolerance, "Tx mismatch");
         }
 
         private void LogResult(string title, RcsEngineResult result)

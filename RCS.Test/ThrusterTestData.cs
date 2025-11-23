@@ -23,5 +23,15 @@ namespace ThrusterOptimizationTests
                 ["T12"] = new RcsThruster(new RcsVector(0, 0, -1), new RcsVector(-0.5, -0.5, -1)),
             };
         }
+
+        public static Dictionary<string, RcsThruster> CreateThrusters3Fx()
+        {
+            return new Dictionary<string, RcsThruster>
+            {
+                ["T1"] = new RcsThruster(new RcsVector(1, 0, 0), new RcsVector(1, 0, 0)),
+                ["T2"] = new RcsThruster(new RcsVector(1, 0, 0), new RcsVector(-1, 0, 0)),
+                ["T3"] = new RcsThruster(new RcsVector(-1, 0, 0), new RcsVector(0, 1, 0)),
+            };
+        }
     }
 }
