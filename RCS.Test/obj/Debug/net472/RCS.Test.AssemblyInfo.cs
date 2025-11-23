@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("RCS.Test")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b4244eba35fceb4de486df8d4a46847c069425d0")]
 [assembly: System.Reflection.AssemblyProductAttribute("RCS.Test")]
 [assembly: System.Reflection.AssemblyTitleAttribute("RCS.Test")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

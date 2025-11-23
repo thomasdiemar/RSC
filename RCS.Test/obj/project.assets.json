@@ -1195,8 +1195,33 @@
           }
         }
       },
+      "LinearSolver/1.0.0": {
+        "type": "project",
+        "compile": {
+          "bin/placeholder/LinearSolver.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/LinearSolver.dll": {}
+        }
+      },
+      "LinearSolver.Custom/1.0.0": {
+        "type": "project",
+        "dependencies": {
+          "LinearSolver": "1.0.0"
+        },
+        "compile": {
+          "bin/placeholder/LinearSolver.Custom.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/LinearSolver.Custom.dll": {}
+        }
+      },
       "RCS/1.0.0": {
         "type": "project",
+        "dependencies": {
+          "LinearSolver": "1.0.0",
+          "LinearSolver.Custom": "1.0.0"
+        },
         "compile": {
           "bin/placeholder/RCS.dll": {}
         },
@@ -2739,6 +2764,16 @@
         "version.txt"
       ]
     },
+    "LinearSolver/1.0.0": {
+      "type": "project",
+      "path": "../LinearSolver/LinearSolver.csproj",
+      "msbuildProject": "../LinearSolver/LinearSolver.csproj"
+    },
+    "LinearSolver.Custom/1.0.0": {
+      "type": "project",
+      "path": "../LinearSolver.Custom/LinearSolver.Custom.csproj",
+      "msbuildProject": "../LinearSolver.Custom/LinearSolver.Custom.csproj"
+    },
     "RCS/1.0.0": {
       "type": "project",
       "path": "../RCS/RCS.csproj",
@@ -2747,6 +2782,8 @@
   },
   "projectFileDependencyGroups": {
     ".NETFramework,Version=v4.7.2": [
+      "LinearSolver >= 1.0.0",
+      "LinearSolver.Custom >= 1.0.0",
       "MSTest >= 4.0.1",
       "Microsoft.Solver.Foundation >= 3.1.0",
       "RCS >= 1.0.0"
@@ -2786,6 +2823,12 @@
         "net472": {
           "targetAlias": "net472",
           "projectReferences": {
+            "C:\\Users\\thoma\\source\\repos\\RSC\\LinearSolver.Custom\\LinearSolver.Custom.csproj": {
+              "projectPath": "C:\\Users\\thoma\\source\\repos\\RSC\\LinearSolver.Custom\\LinearSolver.Custom.csproj"
+            },
+            "C:\\Users\\thoma\\source\\repos\\RSC\\LinearSolver\\LinearSolver.csproj": {
+              "projectPath": "C:\\Users\\thoma\\source\\repos\\RSC\\LinearSolver\\LinearSolver.csproj"
+            },
             "C:\\Users\\thoma\\source\\repos\\RSC\\RCS\\RCS.csproj": {
               "projectPath": "C:\\Users\\thoma\\source\\repos\\RSC\\RCS\\RCS.csproj"
             }

@@ -16,3 +16,7 @@ C:\Users\thoma\source\repos\RSC\RCS\obj\Debug\RCS.csproj.CoreCompileInputs.cache
 C:\Users\thoma\source\repos\RSC\RCS\obj\Debug\RCS.csproj.Up2Date
 C:\Users\thoma\source\repos\RSC\RCS\obj\Debug\RCS.dll
 C:\Users\thoma\source\repos\RSC\RCS\obj\Debug\RCS.pdb
+C:\Users\thoma\source\repos\RSC\RCS\bin\Debug\LinearSolver.Custom.dll
+C:\Users\thoma\source\repos\RSC\RCS\bin\Debug\LinearSolver.dll
+C:\Users\thoma\source\repos\RSC\RCS\bin\Debug\LinearSolver.pdb
+C:\Users\thoma\source\repos\RSC\RCS\bin\Debug\LinearSolver.Custom.pdb

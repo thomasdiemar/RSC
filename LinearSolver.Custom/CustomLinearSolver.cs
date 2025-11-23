@@ -1,18 +1,18 @@
 using System;
 using System.Collections.Generic;
 
-namespace LinearSolver
+namespace LinearSolver.Custom
 {
     /// <summary>
     /// Bounded linear solver for the RCS scenarios. It uses a minimum-norm pseudo-inverse with a
     /// simple active-set method so each thruster output remains in [0,1], closely mirroring the
     /// Microsoft Solver Foundation behaviour used in the tests.
     /// </summary>
-    public static class LinearSystemSolver
+    public class CustomLinearSolver : IMyLinearSolver
     {
         private const double Epsilon = 1e-9;
 
-        public static double[] Solve(double[,] coefficients, double[] constants)
+        public double[] Solve(double[,] coefficients, double[] constants)
         {
             if (coefficients == null)
                 throw new ArgumentNullException(nameof(coefficients));

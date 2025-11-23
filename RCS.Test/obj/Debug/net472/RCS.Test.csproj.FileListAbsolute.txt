@@ -378,3 +378,8 @@ C:\Users\thoma\source\repos\RSC\RCS.Test\obj\Debug\net472\RCS.Test.dll
 C:\Users\thoma\source\repos\RSC\RCS.Test\obj\Debug\net472\RCS.Test.pdb
 C:\Users\thoma\source\repos\RSC\RCS.Test\bin\Debug\net472\RCS.dll
 C:\Users\thoma\source\repos\RSC\RCS.Test\bin\Debug\net472\RCS.pdb
+C:\Users\thoma\source\repos\RSC\RCS.Test\obj\Debug\net472\RCS.Test.sourcelink.json
+C:\Users\thoma\source\repos\RSC\RCS.Test\bin\Debug\net472\LinearSolver.Custom.dll
+C:\Users\thoma\source\repos\RSC\RCS.Test\bin\Debug\net472\LinearSolver.dll
+C:\Users\thoma\source\repos\RSC\RCS.Test\bin\Debug\net472\LinearSolver.Custom.pdb
+C:\Users\thoma\source\repos\RSC\RCS.Test\bin\Debug\net472\LinearSolver.pdb

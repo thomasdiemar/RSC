@@ -1,9 +1,11 @@
-using LinearSolver;
+using LinearSolver.Custom;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using RCS;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+
+//codex resume 019aad7c-0210-76f0-bafb-7c4851ccb64f
 
 namespace ThrusterOptimizationTests
 {
@@ -45,9 +47,9 @@ namespace ThrusterOptimizationTests
             var command = new RcsCommand(desiredForce, desiredTorque);
             var optimiserResult = optimiser.Optimise(engine, command);
 
-            double[] desired = BuildDesiredVector(optimiserResult);
+            double[] desired = optimiser.BuildDesiredVector(engine, command);
 
-            var linearResult = LinearSystemSolver.Solve(CoefficientMatrix, desired);
+            var linearResult = new CustomLinearSolver().Solve(CoefficientMatrix, desired);
             var optimiserThrusts = Thrusters.Select(t => optimiserResult.ThrusterOutputs[t.Key]).ToArray();
 
             var linearResultants = LogResults("Linear Solver", linearResult);
@@ -63,17 +65,6 @@ namespace ThrusterOptimizationTests
             Assert.AreEqual(optimiserResultants.torque.Y, linearResultants.torque.Y, Tolerance, "Ty mismatch");
             Assert.AreEqual(optimiserResultants.torque.Z, linearResultants.torque.Z, Tolerance, "Tz mismatch");
         }
-
-        private static double[] BuildDesiredVector(RcsEngineResult result) =>
-            new[]
-            {
-                result.ResultantForce.X,
-                result.ResultantForce.Y,
-                result.ResultantForce.Z,
-                result.ResultantTorque.X,
-                result.ResultantTorque.Y,
-                result.ResultantTorque.Z
-            };
 
         private static MatrixBuildResult BuildCoefficientMatrix(IReadOnlyList<KeyValuePair<string, RcsThruster>> thrusters)
         {

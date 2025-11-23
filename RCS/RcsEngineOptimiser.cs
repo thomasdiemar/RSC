@@ -1,69 +1,84 @@
 using System;
 using System.Collections.Generic;
-using Microsoft.SolverFoundation.Services;
+using System.Linq;
+using LinearSolver.Custom;
 
 namespace RCS
 {
-    public class RcsEngineOptimiser
+    public class RcsEngineOptimiser : IRcsEngineOptimiser
     {
         public RcsEngineResult Optimise(RcsEngine engine, RcsCommand command)
         {
-            var context = SolverContext.GetContext();
-            context.ClearModel();
-            var model = context.CreateModel();
+            var thrusters = engine.Thrusters.OrderBy(t => t.Key).ToList();
+            double[,] matrix = BuildCoefficientMatrix(thrusters);
+            double[] desired = BuildDesiredVector(engine, command);
 
-            var decisions = new Dictionary<string, Decision>();
-            foreach (var kvp in engine.Thrusters)
-            {
-                var decision = new Decision(Domain.RealRange(0.0, 1.0), kvp.Key);
-                model.AddDecision(decision);
-                decisions[kvp.Key] = decision;
-            }
-
-            Term Fx = 0;
-            Term Fy = 0;
-            Term Fz = 0;
-            Term Tx = 0;
-            Term Ty = 0;
-            Term Tz = 0;
-            foreach (var kvp in engine.Thrusters)
-            {
-                var thruster = kvp.Value;
-                var dir = thruster.Direction;
-                var pos = thruster.Position;
-
-                Fx += decisions[kvp.Key] * dir.X;
-                Fy += decisions[kvp.Key] * dir.Y;
-                Fz += decisions[kvp.Key] * dir.Z;
-
-                Tx += pos.Y * decisions[kvp.Key] * dir.Z - pos.Z * decisions[kvp.Key] * dir.Y;
-                Ty += pos.Z * decisions[kvp.Key] * dir.X - pos.X * decisions[kvp.Key] * dir.Z;
-                Tz += pos.X * decisions[kvp.Key] * dir.Y - pos.Y * decisions[kvp.Key] * dir.X;
-            }
-
-            bool goalAdded = false;
-            goalAdded |= TryAddGoal(model, Fx, command.DesiredForce.X, "Fx");
-            goalAdded |= TryAddGoal(model, Fy, command.DesiredForce.Y, "Fy");
-            goalAdded |= TryAddGoal(model, Fz, command.DesiredForce.Z, "Fz");
-            goalAdded |= TryAddGoal(model, Tx, command.DesiredTorque.X, "Tx");
-            goalAdded |= TryAddGoal(model, Ty, command.DesiredTorque.Y, "Ty");
-            goalAdded |= TryAddGoal(model, Tz, command.DesiredTorque.Z, "Tz");
-
-            if (!goalAdded)
-                throw new InvalidOperationException("No force or torque goal specified in command.");
-
-            context.Solve();
+            var solver = new CustomLinearSolver();
+            double[] outputsArray = solver.Solve(matrix, desired);
 
             var outputs = new Dictionary<string, double>();
-            foreach (var decision in decisions)
-            {
-                outputs[decision.Key] = decision.Value.ToDouble();
-            }
+            for (int i = 0; i < thrusters.Count; i++)
+                outputs[thrusters[i].Key] = outputsArray[i];
 
             var resultantForce = CalculateResultantForce(engine.Thrusters, outputs);
             var resultantTorque = CalculateResultantTorque(engine.Thrusters, outputs);
 
             return new RcsEngineResult(outputs, resultantForce, resultantTorque);
+        }
+
+        public double[] BuildDesiredVector(RcsEngine engine, RcsCommand command)
+        {
+            double maxFx = 0, minFx = 0, maxFy = 0, minFy = 0, maxFz = 0, minFz = 0;
+            double maxTx = 0, minTx = 0, maxTy = 0, minTy = 0, maxTz = 0, minTz = 0;
+
+            foreach (var thruster in engine.Thrusters.Values)
+            {
+                var dir = thruster.Direction;
+                var pos = thruster.Position;
+
+                if (dir.X > 0) maxFx += dir.X; else minFx += dir.X;
+                if (dir.Y > 0) maxFy += dir.Y; else minFy += dir.Y;
+                if (dir.Z > 0) maxFz += dir.Z; else minFz += dir.Z;
+
+                double txCoeff = pos.Y * dir.Z - pos.Z * dir.Y;
+                double tyCoeff = pos.Z * dir.X - pos.X * dir.Z;
+                double tzCoeff = pos.X * dir.Y - pos.Y * dir.X;
+
+                if (txCoeff > 0) maxTx += txCoeff; else minTx += txCoeff;
+                if (tyCoeff > 0) maxTy += tyCoeff; else minTy += tyCoeff;
+                if (tzCoeff > 0) maxTz += tzCoeff; else minTz += tzCoeff;
+            }
+
+            return new[]
+            {
+                SelectDesired(maxFx, minFx, command.DesiredForce.X),
+                SelectDesired(maxFy, minFy, command.DesiredForce.Y),
+                SelectDesired(maxFz, minFz, command.DesiredForce.Z),
+                SelectDesired(maxTx, minTx, command.DesiredTorque.X),
+                SelectDesired(maxTy, minTy, command.DesiredTorque.Y),
+                SelectDesired(maxTz, minTz, command.DesiredTorque.Z)
+            };
+        }
+
+        private static double[,] BuildCoefficientMatrix(IReadOnlyList<KeyValuePair<string, RcsThruster>> thrusters)
+        {
+            double[,] matrix = new double[6, thrusters.Count];
+
+            for (int col = 0; col < thrusters.Count; col++)
+            {
+                var thruster = thrusters[col].Value;
+                var dir = thruster.Direction;
+                var pos = thruster.Position;
+
+                matrix[0, col] = dir.X;
+                matrix[1, col] = dir.Y;
+                matrix[2, col] = dir.Z;
+                matrix[3, col] = pos.Y * dir.Z - pos.Z * dir.Y;
+                matrix[4, col] = pos.Z * dir.X - pos.X * dir.Z;
+                matrix[5, col] = pos.X * dir.Y - pos.Y * dir.X;
+            }
+
+            return matrix;
         }
 
         private static RcsVector CalculateResultantForce(
@@ -106,21 +121,13 @@ namespace RCS
             return new RcsVector(tx, ty, tz);
         }
 
-        private static bool TryAddGoal(Model model, Term term, double desired, string name)
+        private static double SelectDesired(double max, double min, double requested)
         {
-            if (desired > 0)
-            {
-                model.AddGoal($"Maximize{name}", GoalKind.Maximize, term);
-                return true;
-            }
-
-            if (desired < 0)
-            {
-                model.AddGoal($"Minimize{name}", GoalKind.Minimize, term);
-                return true;
-            }
-
-            return false;
+            if (requested > 0)
+                return max;
+            if (requested < 0)
+                return min;
+            return 0;
         }
     }
 }
