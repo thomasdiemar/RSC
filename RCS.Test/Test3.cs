@@ -13,13 +13,13 @@ namespace ThrusterOptimizationTests
         [TestMethod]
         public void ThrusterAllocation_MaxFx_12Thrusters()
         {
-            var thrusters = CreateThrusters();
+            var thrusters = ThrusterTestData.CreateThrusters();
 
             var engine = new RcsEngine(thrusters);
             var optimiser = new RcsEngineOptimiser();
 
             var command = new RcsCommand(new RcsVector(1, 0, 0), new RcsVector());
-            var result = optimiser.OptimiseForce(engine, command);
+            var result = optimiser.Optimise(engine, command);
 
             LogResult("Max Fx", result);
 
@@ -31,13 +31,13 @@ namespace ThrusterOptimizationTests
         [TestMethod]
         public void ThrusterAllocation_MinFx_12Thrusters()
         {
-            var thrusters = CreateThrusters();
+            var thrusters = ThrusterTestData.CreateThrusters();
 
             var engine = new RcsEngine(thrusters);
             var optimiser = new RcsEngineOptimiser();
 
             var command = new RcsCommand(new RcsVector(-1, 0, 0), new RcsVector());
-            var result = optimiser.OptimiseForce(engine, command);
+            var result = optimiser.Optimise(engine, command);
 
             LogResult("Min Fx", result);
 
@@ -49,13 +49,13 @@ namespace ThrusterOptimizationTests
         [TestMethod]
         public void ThrusterAllocation_MaxFy_12Thrusters()
         {
-            var thrusters = CreateThrusters();
+            var thrusters = ThrusterTestData.CreateThrusters();
 
             var engine = new RcsEngine(thrusters);
             var optimiser = new RcsEngineOptimiser();
 
             var command = new RcsCommand(new RcsVector(0, 1, 0), new RcsVector());
-            var result = optimiser.OptimiseForce(engine, command);
+            var result = optimiser.Optimise(engine, command);
 
             LogResult("Max Fy", result);
 
@@ -67,13 +67,13 @@ namespace ThrusterOptimizationTests
         [TestMethod]
         public void ThrusterAllocation_MinFy_12Thrusters()
         {
-            var thrusters = CreateThrusters();
+            var thrusters = ThrusterTestData.CreateThrusters();
 
             var engine = new RcsEngine(thrusters);
             var optimiser = new RcsEngineOptimiser();
 
             var command = new RcsCommand(new RcsVector(0, -1, 0), new RcsVector());
-            var result = optimiser.OptimiseForce(engine, command);
+            var result = optimiser.Optimise(engine, command);
 
             LogResult("Min Fy", result);
 
@@ -85,13 +85,13 @@ namespace ThrusterOptimizationTests
         [TestMethod]
         public void ThrusterAllocation_MaxFz_12Thrusters()
         {
-            var thrusters = CreateThrusters();
+            var thrusters = ThrusterTestData.CreateThrusters();
 
             var engine = new RcsEngine(thrusters);
             var optimiser = new RcsEngineOptimiser();
 
             var command = new RcsCommand(new RcsVector(0, 0, 1), new RcsVector());
-            var result = optimiser.OptimiseForce(engine, command);
+            var result = optimiser.Optimise(engine, command);
 
             LogResult("Max Fz", result);
 
@@ -103,13 +103,13 @@ namespace ThrusterOptimizationTests
         [TestMethod]
         public void ThrusterAllocation_MinFz_12Thrusters()
         {
-            var thrusters = CreateThrusters();
+            var thrusters = ThrusterTestData.CreateThrusters();
 
             var engine = new RcsEngine(thrusters);
             var optimiser = new RcsEngineOptimiser();
 
             var command = new RcsCommand(new RcsVector(0, 0, -1), new RcsVector());
-            var result = optimiser.OptimiseForce(engine, command);
+            var result = optimiser.Optimise(engine, command);
 
             LogResult("Min Fz", result);
 
@@ -121,13 +121,13 @@ namespace ThrusterOptimizationTests
         [TestMethod]
         public void ThrusterAllocation_MaxTx_12Thrusters()
         {
-            var thrusters = CreateThrusters();
+            var thrusters = ThrusterTestData.CreateThrusters();
 
             var engine = new RcsEngine(thrusters);
             var optimiser = new RcsEngineOptimiser();
 
             var command = new RcsCommand(new RcsVector(), new RcsVector(1, 0, 0));
-            var result = optimiser.OptimiseTorque(engine, command);
+            var result = optimiser.Optimise(engine, command);
 
             LogResult("Max Tx", result);
 
@@ -137,13 +137,13 @@ namespace ThrusterOptimizationTests
         [TestMethod]
         public void ThrusterAllocation_MinTx_12Thrusters()
         {
-            var thrusters = CreateThrusters();
+            var thrusters = ThrusterTestData.CreateThrusters();
 
             var engine = new RcsEngine(thrusters);
             var optimiser = new RcsEngineOptimiser();
 
             var command = new RcsCommand(new RcsVector(), new RcsVector(-1, 0, 0));
-            var result = optimiser.OptimiseTorque(engine, command);
+            var result = optimiser.Optimise(engine, command);
 
             LogResult("Min Tx", result);
 
@@ -153,13 +153,13 @@ namespace ThrusterOptimizationTests
         [TestMethod]
         public void ThrusterAllocation_MaxTy_12Thrusters()
         {
-            var thrusters = CreateThrusters();
+            var thrusters = ThrusterTestData.CreateThrusters();
 
             var engine = new RcsEngine(thrusters);
             var optimiser = new RcsEngineOptimiser();
 
             var command = new RcsCommand(new RcsVector(), new RcsVector(0, 1, 0));
-            var result = optimiser.OptimiseTorque(engine, command);
+            var result = optimiser.Optimise(engine, command);
 
             LogResult("Max Ty", result);
 
@@ -169,13 +169,13 @@ namespace ThrusterOptimizationTests
         [TestMethod]
         public void ThrusterAllocation_MinTy_12Thrusters()
         {
-            var thrusters = CreateThrusters();
+            var thrusters = ThrusterTestData.CreateThrusters();
 
             var engine = new RcsEngine(thrusters);
             var optimiser = new RcsEngineOptimiser();
 
             var command = new RcsCommand(new RcsVector(), new RcsVector(0, -1, 0));
-            var result = optimiser.OptimiseTorque(engine, command);
+            var result = optimiser.Optimise(engine, command);
 
             LogResult("Min Ty", result);
 
@@ -185,13 +185,13 @@ namespace ThrusterOptimizationTests
         [TestMethod]
         public void ThrusterAllocation_MaxTz_12Thrusters()
         {
-            var thrusters = CreateThrusters();
+            var thrusters = ThrusterTestData.CreateThrusters();
 
             var engine = new RcsEngine(thrusters);
             var optimiser = new RcsEngineOptimiser();
 
             var command = new RcsCommand(new RcsVector(), new RcsVector(0, 0, 1));
-            var result = optimiser.OptimiseTorque(engine, command);
+            var result = optimiser.Optimise(engine, command);
 
             LogResult("Max Tz", result);
 
@@ -201,37 +201,19 @@ namespace ThrusterOptimizationTests
         [TestMethod]
         public void ThrusterAllocation_MinTz_12Thrusters()
         {
-            var thrusters = CreateThrusters();
+            var thrusters = ThrusterTestData.CreateThrusters();
 
             var engine = new RcsEngine(thrusters);
             var optimiser = new RcsEngineOptimiser();
 
             var command = new RcsCommand(new RcsVector(), new RcsVector(0, 0, -1));
-            var result = optimiser.OptimiseTorque(engine, command);
+            var result = optimiser.Optimise(engine, command);
 
             LogResult("Min Tz", result);
 
             Assert.IsTrue(result.ResultantTorque.Z < 0, "Expected negative torque around Z axis");
         }
 
-        private static Dictionary<string, RcsThruster> CreateThrusters()
-        {
-            return new Dictionary<string, RcsThruster>
-            {
-                ["T1"] = new RcsThruster(new RcsVector(1, 0, 0), new RcsVector(1, 0.5, 0.5)),
-                ["T2"] = new RcsThruster(new RcsVector(1, 0, 0), new RcsVector(1, -0.5, -0.5)),
-                ["T3"] = new RcsThruster(new RcsVector(-1, 0, 0), new RcsVector(-1, 0.5, -0.5)),
-                ["T4"] = new RcsThruster(new RcsVector(-1, 0, 0), new RcsVector(-1, -0.5, 0.5)),
-                ["T5"] = new RcsThruster(new RcsVector(0, 1, 0), new RcsVector(0.5, 1, -0.5)),
-                ["T6"] = new RcsThruster(new RcsVector(0, 1, 0), new RcsVector(-0.5, 1, 0.5)),
-                ["T7"] = new RcsThruster(new RcsVector(0, -1, 0), new RcsVector(0.5, -1, 0.5)),
-                ["T8"] = new RcsThruster(new RcsVector(0, -1, 0), new RcsVector(-0.5, -1, -0.5)),
-                ["T9"] = new RcsThruster(new RcsVector(0, 0, 1), new RcsVector(0.5, -0.5, 1)),
-                ["T10"] = new RcsThruster(new RcsVector(0, 0, 1), new RcsVector(-0.5, 0.5, 1)),
-                ["T11"] = new RcsThruster(new RcsVector(0, 0, -1), new RcsVector(0.5, 0.5, -1)),
-                ["T12"] = new RcsThruster(new RcsVector(0, 0, -1), new RcsVector(-0.5, -0.5, -1)),
-            };
-        }
 
         private void LogResult(string title, RcsEngineResult result)
         {
