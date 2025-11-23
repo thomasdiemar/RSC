@@ -57,6 +57,11 @@ namespace LinearSolver.Custom
                     SubtractColumn(coefficients, thrusterIndex, boundValue, remaining);
             }
 
+            result = ClampSolution(result);
+
+            if (!IsFeasible(coefficients, constants, result))
+                return new double[coefficients.GetLength(1)]; // fallback to zeros when infeasible
+
             return result;
         }
 
@@ -243,6 +248,36 @@ namespace LinearSolver.Custom
             int rows = coefficients.GetLength(0);
             for (int row = 0; row < rows; row++)
                 desired[row] -= coefficients[row, columnIndex] * value;
+        }
+
+        private static double[] ClampSolution(double[] solution)
+        {
+            var clamped = new double[solution.Length];
+            for (int i = 0; i < solution.Length; i++)
+            {
+                if (solution[i] < 0) clamped[i] = 0;
+                else if (solution[i] > 1) clamped[i] = 1;
+                else clamped[i] = solution[i];
+            }
+            return clamped;
+        }
+
+        private static bool IsFeasible(double[,] coefficients, double[] constants, double[] solution)
+        {
+            int rows = coefficients.GetLength(0);
+            int cols = coefficients.GetLength(1);
+
+            for (int row = 0; row < rows; row++)
+            {
+                double lhs = 0;
+                for (int col = 0; col < cols; col++)
+                    lhs += coefficients[row, col] * solution[col];
+
+                if (Math.Abs(lhs - constants[row]) > 1e-6)
+                    return false;
+            }
+
+            return true;
         }
     }
 }

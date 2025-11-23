@@ -29,6 +29,18 @@ namespace ThrusterOptimizationTests
         [TestMethod] public void MinTz_MatchesMsf() => AssertOptimisersMatch(new RcsVector(), new RcsVector(0, 0, -1));
 
         [TestMethod] public void ThreeFx_Thrusters_MaxFx_MatchesMsf() => AssertOptimisersMatch3Fx(new RcsVector(1, 0, 0), new RcsVector());
+        [TestMethod] public void ThreeFx_Thrusters_MinFx_MatchesMsf() => AssertOptimisersMatch3Fx(new RcsVector(-1, 0, 0), new RcsVector());
+        [TestMethod] public void ThreeFx_Thrusters_MaxFy_MatchesMsf() => AssertOptimisersMatch3Fx(new RcsVector(0, 1, 0), new RcsVector());
+        [TestMethod] public void ThreeFx_Thrusters_MinFy_MatchesMsf() => AssertOptimisersMatch3Fx(new RcsVector(0, -1, 0), new RcsVector());
+        [TestMethod] public void ThreeFx_Thrusters_MaxFz_MatchesMsf() => AssertOptimisersMatch3Fx(new RcsVector(0, 0, 1), new RcsVector());
+        [TestMethod] public void ThreeFx_Thrusters_MinFz_MatchesMsf() => AssertOptimisersMatch3Fx(new RcsVector(0, 0, -1), new RcsVector());
+
+        [TestMethod] public void ThreeFx_Thrusters_MaxTx_MatchesMsf() => AssertOptimisersMatch3Fx(new RcsVector(), new RcsVector(1, 0, 0));
+        [TestMethod] public void ThreeFx_Thrusters_MinTx_MatchesMsf() => AssertOptimisersMatch3Fx(new RcsVector(), new RcsVector(-1, 0, 0));
+        [TestMethod] public void ThreeFx_Thrusters_MaxTy_MatchesMsf() => AssertOptimisersMatch3Fx(new RcsVector(), new RcsVector(0, 1, 0));
+        [TestMethod] public void ThreeFx_Thrusters_MinTy_MatchesMsf() => AssertOptimisersMatch3Fx(new RcsVector(), new RcsVector(0, -1, 0));
+        [TestMethod] public void ThreeFx_Thrusters_MaxTz_MatchesMsf() => AssertOptimisersMatch3Fx(new RcsVector(), new RcsVector(0, 0, 1));
+        [TestMethod] public void ThreeFx_Thrusters_MinTz_MatchesMsf() => AssertOptimisersMatch3Fx(new RcsVector(), new RcsVector(0, 0, -1));
 
         private void AssertOptimisersMatch(RcsVector desiredForce, RcsVector desiredTorque)
         {
@@ -75,7 +87,11 @@ namespace ThrusterOptimizationTests
             }
 
             Assert.AreEqual(msfResult.ResultantForce.X, customResult.ResultantForce.X, tolerance, "Fx mismatch");
+            Assert.AreEqual(msfResult.ResultantForce.Y, customResult.ResultantForce.Y, tolerance, "Fy mismatch");
+            Assert.AreEqual(msfResult.ResultantForce.Z, customResult.ResultantForce.Z, tolerance, "Fz mismatch");
             Assert.AreEqual(msfResult.ResultantTorque.X, customResult.ResultantTorque.X, tolerance, "Tx mismatch");
+            Assert.AreEqual(msfResult.ResultantTorque.Y, customResult.ResultantTorque.Y, tolerance, "Ty mismatch");
+            Assert.AreEqual(msfResult.ResultantTorque.Z, customResult.ResultantTorque.Z, tolerance, "Tz mismatch");
         }
 
         private void LogResult(string title, RcsEngineResult result)
