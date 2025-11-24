@@ -60,16 +60,14 @@ namespace RCS
                 if (tzCoeff > 0) maxTz += tzCoeff; else minTz += tzCoeff;
             }
 
-            const double softZero = 1e-9; // Avoid strict equality when soft goals are allowed.
-
             return new[]
             {
-                SelectDesired(maxFx, minFx, command.DesiredForce.X, command.AllowNonCommandedForces, softZero),
-                SelectDesired(maxFy, minFy, command.DesiredForce.Y, command.AllowNonCommandedForces, softZero),
-                SelectDesired(maxFz, minFz, command.DesiredForce.Z, command.AllowNonCommandedForces, softZero),
-                SelectDesired(maxTx, minTx, command.DesiredTorque.X, command.AllowNonCommandedTorques, softZero),
-                SelectDesired(maxTy, minTy, command.DesiredTorque.Y, command.AllowNonCommandedTorques, softZero),
-                SelectDesired(maxTz, minTz, command.DesiredTorque.Z, command.AllowNonCommandedTorques, softZero)
+                SelectDesired(maxFx, minFx, command.DesiredForce.X, command.AllowNonCommandedForces),
+                SelectDesired(maxFy, minFy, command.DesiredForce.Y, command.AllowNonCommandedForces),
+                SelectDesired(maxFz, minFz, command.DesiredForce.Z, command.AllowNonCommandedForces),
+                SelectDesired(maxTx, minTx, command.DesiredTorque.X, command.AllowNonCommandedTorques),
+                SelectDesired(maxTy, minTy, command.DesiredTorque.Y, command.AllowNonCommandedTorques),
+                SelectDesired(maxTz, minTz, command.DesiredTorque.Z, command.AllowNonCommandedTorques)
             };
         }
 
@@ -94,13 +92,13 @@ namespace RCS
             return matrix;
         }
 
-        private static double SelectDesired(double max, double min, double requested, bool allowSoftZero, double softZero)
+        private static double SelectDesired(double max, double min, double requested, bool allowSoftZero)
         {
             if (requested > 0)
                 return max;
             if (requested < 0)
                 return min;
-            return allowSoftZero ? softZero : 0;
+            return allowSoftZero ? double.NaN : 0;
         }
 
         private static RcsVector CalculateResultantForce(

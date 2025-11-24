@@ -22,6 +22,7 @@ namespace LinearSolver.MSF
             var context = SolverContext.GetContext();
             context.ClearModel();
             var model = context.CreateModel();
+            Term objective = 0;
 
             Decision[] decisions = new Decision[cols];
             for (int i = 0; i < cols; i++)
@@ -51,6 +52,9 @@ namespace LinearSolver.MSF
 
     public class MsfGoalLinearSolver : IMyLinearSolver
     {
+        private const double SoftZeroWeight = 1.0;
+        private const double RegularizationWeight = 1.0;
+
         public double[] Solve(double[,] coefficients, double[] constants)
         {
             if (coefficients == null)
@@ -75,35 +79,46 @@ namespace LinearSolver.MSF
                 model.AddDecision(decisions[i]);
             }
 
+            // Primary goals
             for (int row = 0; row < rows; row++)
             {
                 Term lhs = 0;
                 for (int col = 0; col < cols; col++)
                     lhs += coefficients[row, col] * decisions[col];
 
-                if (constants[row] > 0)
-                {
-                    System.Diagnostics.Debug.WriteLine("Adding Max Goal " + lhs.ToString());
-                    var goal = model.AddGoal($"Max_{row}", GoalKind.Maximize, lhs);
-                    //goal.Order = 2;
-                }
-                else if (constants[row] < 0)
-                {
-                    System.Diagnostics.Debug.WriteLine("Adding Min Goal " + lhs.ToString());
-                    var goal = model.AddGoal($"Min_{row}", GoalKind.Minimize,lhs );
-                    //goal.Order = 2;
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine("Adding Min(c) Goal " + lhs.ToString());
-                    // For zero constants, we can add a constraint to keep it balanced
-                    model.AddConstraint($"Eq_{row}", lhs == constants[row]);
-                    //var goal = model.AddGoal($"Min_{row}", GoalKind.Minimize, 0);
-                    //goal.Order = 1;
+                if (double.IsNaN(constants[row]))
+                    continue;
 
-                }
+                if (constants[row] > 0)
+                    model.AddGoal($"Max_{row}", GoalKind.Maximize, lhs);
+                else if (constants[row] < 0)
+                    model.AddGoal($"Min_{row}", GoalKind.Minimize, lhs);
+                else
+                    model.AddConstraint($"Eq_{row}", lhs == constants[row]);
             }
-            //model.AddGoal("MinZero", GoalKind.Minimize, 0);
+
+            // Soft-zero goals via absolute value auxiliary variables.
+            for (int row = 0; row < rows; row++)
+            {
+                if (!double.IsNaN(constants[row]))
+                    continue;
+
+                Term lhs = 0;
+                for (int col = 0; col < cols; col++)
+                    lhs += coefficients[row, col] * decisions[col];
+
+                var absVar = new Decision(Domain.RealNonnegative, $"abs_{row}");
+                model.AddDecision(absVar);
+                model.AddConstraint($"AbsPos_{row}", absVar >= lhs);
+                model.AddConstraint($"AbsNeg_{row}", absVar >= -lhs);
+                model.AddGoal($"SoftZero_{row}", GoalKind.Minimize, SoftZeroWeight * absVar);
+            }
+
+            // Mild bias toward lower overall thrust usage.
+            Term totalThrust = 0;
+            for (int i = 0; i < cols; i++)
+                totalThrust += decisions[i];
+            model.AddGoal("Reg_TotalThrust", GoalKind.Minimize, RegularizationWeight * totalThrust);
             context.Solve();
 
             var result = new double[cols];

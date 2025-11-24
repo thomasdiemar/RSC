@@ -33,5 +33,16 @@ namespace ThrusterOptimizationTests
                 ["T3"] = new RcsThruster(new RcsVector(0, 0, 1), new RcsVector(0, 1, 0)),
             };
         }
+
+        public static Dictionary<string, RcsThruster> CreateThrusters4Fx()
+        {
+            return new Dictionary<string, RcsThruster>
+            {
+                ["T1"] = new RcsThruster(new RcsVector(0, 0, 1), new RcsVector(1, 1, 0)),
+                ["T2"] = new RcsThruster(new RcsVector(0, 0, 1), new RcsVector(1, -1, 0)),
+                ["T3"] = new RcsThruster(new RcsVector(0, 0, 1), new RcsVector(-1, 1, 0)),
+                ["T4"] = new RcsThruster(new RcsVector(0, 0, 1), new RcsVector(-1, -1, 0)),
+            };
+        }
     }
 }

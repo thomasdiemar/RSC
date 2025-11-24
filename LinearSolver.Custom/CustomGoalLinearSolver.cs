@@ -46,7 +46,7 @@ namespace LinearSolver.Custom
                     for (int col = 0; col < cols; col++)
                         dot += coefficients[row, col] * solution[col];
 
-                    double desired = constants[row];
+                    double desired = double.IsNaN(constants[row]) ? 0.0 : constants[row];
                     double error = dot - desired;
                     double weight = weights[row];
 
@@ -95,9 +95,11 @@ namespace LinearSolver.Custom
             for (int i = 0; i < constants.Length; i++)
             {
                 double importance = Math.Pow(baseWeight, constants.Length - i);
-                double magnitude = Math.Abs(constants[i]) < SoftZeroTolerance
-                    ? SoftZeroWeight
-                    : Math.Max(Math.Abs(constants[i]), 1.0);
+                double magnitude;
+                if (double.IsNaN(constants[i]) || Math.Abs(constants[i]) < SoftZeroTolerance)
+                    magnitude = SoftZeroWeight;
+                else
+                    magnitude = Math.Max(Math.Abs(constants[i]), 1.0);
                 weights[i] = importance * magnitude;
             }
             return weights;
@@ -110,6 +112,12 @@ namespace LinearSolver.Custom
             var eqRows = new List<int>();
             for (int row = 0; row < rows; row++)
             {
+                if (double.IsNaN(constants[row]))
+                {
+                    // Soft zero: no equality row.
+                    continue;
+                }
+
                 if (Math.Abs(constants[row]) < EqualityTolerance)
                 {
                     // Only enforce equality if this row is truly intended as hard zero (not soft zero).

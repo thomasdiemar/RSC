@@ -48,7 +48,7 @@ namespace ThrusterOptimizationTests
         [TestMethod] public void FourFx_Thrusters_MaxFz_MatchesMsf() => AssertOptimisersMatch4Fx(new RcsVector(0, 0, 1), new RcsVector());
         [TestMethod] public void FourFx_Thrusters_MinFz_MatchesMsf() => AssertOptimisersMatch4Fx(new RcsVector(0, 0, -1), new RcsVector());
 
-        [TestMethod] public void FourFx_Thrusters_MaxTx_MatchesMsf() => AssertOptimisersMatch4Fx(new RcsVector(), new RcsVector(1, 0, 0));
+        [TestMethod] public void AllowNonCommandedForces() => AssertOptimisersMatch4Fx(new RcsVector(), new RcsVector(1, 0, 0));
         [TestMethod] public void FourFx_Thrusters_MinTx_MatchesMsf() => AssertOptimisersMatch4Fx(new RcsVector(), new RcsVector(-1, 0, 0));
         [TestMethod] public void FourFx_Thrusters_MaxTy_MatchesMsf() => AssertOptimisersMatch4Fx(new RcsVector(), new RcsVector(0, 1, 0));
         [TestMethod] public void FourFx_Thrusters_MinTy_MatchesMsf() => AssertOptimisersMatch4Fx(new RcsVector(), new RcsVector(0, -1, 0));
@@ -58,7 +58,7 @@ namespace ThrusterOptimizationTests
         private void AssertOptimisersMatch(RcsVector desiredForce, RcsVector desiredTorque)
         {
             var engine = new RcsEngine(ThrusterTestData.CreateThrusters());
-            var command = new RcsCommand(desiredForce, desiredTorque);
+            var command = new RcsCommand(desiredForce, desiredTorque, allowNonCommandedForces: true);
 
             var customResult = customOptimiser.Optimise(engine, command);
             var msfResult = mfsOptimiser.Optimise(engine, command);
