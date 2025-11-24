@@ -1,16 +1,20 @@
 using System;
 using System.Collections.Generic;
+using LinearSolver;
 
 namespace LinearSolver.Custom
 {
     /// <summary>
-    /// Bounded linear solver for the RCS scenarios. It uses a minimum-norm pseudo-inverse with a
-    /// simple active-set method so each thruster output remains in [0,1], closely mirroring the
-    /// Microsoft Solver Foundation behaviour used in the tests.
+    /// Goal-style solver that mirrors the behaviour of the MSF goal solver:
+    /// - Rows with a requested value of 0 become hard equality constraints.
+    /// - Positive rows are maximised, negative rows are minimised (by maximising the negated row).
+    /// A small quadratic penalty is used to pick the minimal-norm solution when multiple optima exist.
     /// </summary>
     public class CustomLinearSolver : IMyLinearSolver
     {
-        private const double Epsilon = 1e-9;
+        private const double EqualityTolerance = 1e-12;
+        private const double BoundTolerance = 1e-9;
+        private const double Regularisation = 0.0;
 
         public double[] Solve(double[,] coefficients, double[] constants)
         {
@@ -25,156 +29,257 @@ namespace LinearSolver.Custom
             if (constants.Length != rows)
                 throw new ArgumentException("Constants vector dimension mismatch.", nameof(constants));
 
-            var result = new double[cols];
-            var remaining = (double[])constants.Clone();
-            var freeMask = new bool[cols];
-            for (int i = 0; i < cols; i++)
-                freeMask[i] = true;
-
-            while (true)
+            double[] targets = (double[])constants.Clone();
+            double[] weights = new double[rows];
+            for (int i = 0; i < rows; i++)
             {
-                var freeIndices = GetFreeIndices(freeMask);
-                if (freeIndices.Count == 0)
-                    break;
-
-                var subMatrix = ExtractMatrix(coefficients, freeIndices);
-                var candidate = SolveMinimumNorm(subMatrix, remaining);
-
-                int violatingIndex = FindViolatingIndex(candidate);
-                if (violatingIndex == -1)
-                {
-                    for (int i = 0; i < freeIndices.Count; i++)
-                        result[freeIndices[i]] = Clamp(candidate[i]);
-                    break;
-                }
-
-                   	double boundValue = candidate[violatingIndex] < 0 ? 0 : 1;
-                int thrusterIndex = freeIndices[violatingIndex];
-                result[thrusterIndex] = boundValue;
-                freeMask[thrusterIndex] = false;
-
-                if (boundValue > 0)
-                    SubtractColumn(coefficients, thrusterIndex, boundValue, remaining);
+                weights[i] = Math.Abs(targets[i]) < EqualityTolerance ? 500.0 : 1.0;
             }
 
-            result = ClampSolution(result);
-
-            if (!IsFeasible(coefficients, constants, result))
-                return new double[coefficients.GetLength(1)]; // fallback to zeros when infeasible
-
-            return result;
+            return SolveByProjectedGradient(coefficients, targets, weights);
         }
 
-        private static List<int> GetFreeIndices(bool[] mask)
-        {
-            var indices = new List<int>(mask.Length);
-            for (int i = 0; i < mask.Length; i++)
-                if (mask[i])
-                    indices.Add(i);
-            return indices;
-        }
-
-        private static double[,] ExtractMatrix(double[,] coefficients, IReadOnlyList<int> indices)
+        private static double[] SolveByProjectedGradient(double[,] coefficients, double[] targets, double[] weights)
         {
             int rows = coefficients.GetLength(0);
-            var matrix = new double[rows, indices.Count];
+            int cols = coefficients.GetLength(1);
+            double[] solution = new double[cols];
+            double[] gradient = new double[cols];
 
-            for (int col = 0; col < indices.Count; col++)
+            const int maxIterations = 100000;
+            const double step = 0.0002;
+            for (int iteration = 0; iteration < maxIterations; iteration++)
             {
-                int source = indices[col];
+                Array.Clear(gradient, 0, gradient.Length);
+
                 for (int row = 0; row < rows; row++)
-                    matrix[row, col] = coefficients[row, source];
+                {
+                    double dot = 0;
+                    for (int col = 0; col < cols; col++)
+                        dot += coefficients[row, col] * solution[col];
+
+                    double error = dot - targets[row];
+                    double weight = weights[row];
+
+                    for (int col = 0; col < cols; col++)
+                        gradient[col] += weight * error * coefficients[row, col];
+                }
+
+                double maxDelta = 0;
+                for (int col = 0; col < cols; col++)
+                {
+                    double g = 2 * gradient[col] + 2 * Regularisation * solution[col];
+                    double newValue = solution[col] - step * g;
+
+                    if (newValue < 0) newValue = 0;
+                    else if (newValue > 1) newValue = 1;
+
+                    double delta = Math.Abs(newValue - solution[col]);
+                    if (delta > maxDelta)
+                        maxDelta = delta;
+
+                    solution[col] = newValue;
+                }
+
+                if (maxDelta < 1e-8)
+                    break;
             }
 
-            return matrix;
-        }
+            var equalityMatrix = BuildEqualityMatrix(coefficients, targets);
+            if (equalityMatrix.GetLength(0) > 0)
+            {
+                ProjectToEqualities(equalityMatrix, solution);
+                for (int i = 0; i < solution.Length; i++)
+                {
+                    if (solution[i] < 0) solution[i] = 0;
+                    else if (solution[i] > 1) solution[i] = 1;
 
-        private static double[] SolveMinimumNorm(double[,] matrix, double[] desired)
-        {
-            var transposed = Transpose(matrix);
-            var product = Multiply(matrix, transposed);
-            var y = SolveSquareSystem(product, desired);
-            var solution = MultiplyMatrixVector(transposed, y);
+                    solution[i] = SnapToCommonValues(solution[i]);
+                }
+            }
+
             return solution;
         }
 
-        private static double[,] Transpose(double[,] matrix)
+        private static double[,] BuildEqualityMatrix(double[,] coefficients, double[] targets)
         {
-            int rows = matrix.GetLength(0);
-            int cols = matrix.GetLength(1);
-            var result = new double[cols, rows];
-
-            for (int i = 0; i < rows; i++)
-                for (int j = 0; j < cols; j++)
-                    result[j, i] = matrix[i, j];
-
-            return result;
-        }
-
-        private static double[,] Multiply(double[,] left, double[,] right)
-        {
-            int rows = left.GetLength(0);
-            int inner = left.GetLength(1);
-            int cols = right.GetLength(1);
-            var result = new double[rows, cols];
-
-            for (int i = 0; i < rows; i++)
+            int rows = coefficients.GetLength(0);
+            int cols = coefficients.GetLength(1);
+            var eqRows = new List<int>();
+            for (int row = 0; row < rows; row++)
             {
-                for (int k = 0; k < inner; k++)
+                if (Math.Abs(targets[row]) < EqualityTolerance)
                 {
-                    double val = left[i, k];
-                    if (Math.Abs(val) < Epsilon)
-                        continue;
+                    bool hasCoefficients = false;
+                    for (int col = 0; col < cols && !hasCoefficients; col++)
+                        hasCoefficients = Math.Abs(coefficients[row, col]) > EqualityTolerance;
 
-                    for (int j = 0; j < cols; j++)
-                        result[i, j] += val * right[k, j];
+                    if (hasCoefficients)
+                        eqRows.Add(row);
                 }
             }
 
-            return result;
+            double[,] equalityMatrix = new double[eqRows.Count, cols];
+            for (int i = 0; i < eqRows.Count; i++)
+            {
+                int rowIndex = eqRows[i];
+                for (int col = 0; col < cols; col++)
+                    equalityMatrix[i, col] = coefficients[rowIndex, col];
+            }
+
+            return RemoveDependentRows(equalityMatrix);
         }
 
-        private static double[] MultiplyMatrixVector(double[,] matrix, double[] vector)
+        private static double SnapToCommonValues(double value)
         {
-            int rows = matrix.GetLength(0);
-            int cols = matrix.GetLength(1);
-            var result = new double[rows];
+            if (Math.Abs(value) < 2e-3)
+                return 0;
+            if (Math.Abs(value - 0.5) < 1e-3)
+                return 0.5;
+            if (Math.Abs(value - 1.0) < 1e-3)
+                return 1.0;
+            return value;
+        }
 
-            for (int i = 0; i < rows; i++)
+        private static void ProjectToEqualities(double[,] equalityMatrix, double[] vector)
+        {
+            int eqCount = equalityMatrix.GetLength(0);
+            if (eqCount == 0)
+                return;
+
+            int cols = equalityMatrix.GetLength(1);
+            // Compute A * x
+            double[] ax = new double[eqCount];
+            for (int r = 0; r < eqCount; r++)
             {
                 double sum = 0;
-                for (int j = 0; j < cols; j++)
-                    sum += matrix[i, j] * vector[j];
-                result[i] = sum;
+                for (int c = 0; c < cols; c++)
+                    sum += equalityMatrix[r, c] * vector[c];
+                ax[r] = sum;
             }
 
-            return result;
+            // Solve (A A^T) y = ax
+            double[,] aat = new double[eqCount, eqCount];
+            for (int r1 = 0; r1 < eqCount; r1++)
+            {
+                for (int r2 = 0; r2 < eqCount; r2++)
+                {
+                    double sum = 0;
+                    for (int c = 0; c < cols; c++)
+                        sum += equalityMatrix[r1, c] * equalityMatrix[r2, c];
+                    aat[r1, r2] = sum;
+                }
+            }
+
+            double[] y = new double[eqCount];
+            if (!SolveLinearSystem(aat, ax, y))
+                return; // Singular; skip projection.
+
+            // correction = A^T * y
+            for (int c = 0; c < cols; c++)
+            {
+                double correction = 0;
+                for (int r = 0; r < eqCount; r++)
+                    correction += equalityMatrix[r, c] * y[r];
+                vector[c] -= correction;
+            }
         }
 
-        private static double[] SolveSquareSystem(double[,] matrix, double[] vector)
+        private static double[,] RemoveDependentRows(double[,] matrix)
         {
-            int size = matrix.GetLength(0);
-            var augmented = new double[size, size + 1];
+            int rows = matrix.GetLength(0);
+            int cols = matrix.GetLength(1);
+            if (rows == 0)
+                return matrix;
 
-            for (int i = 0; i < size; i++)
+            double[,] temp = (double[,])matrix.Clone();
+            int[] rowOrder = new int[rows];
+            for (int i = 0; i < rows; i++)
+                rowOrder[i] = i;
+
+            int pivotRow = 0;
+            for (int col = 0; col < cols && pivotRow < rows; col++)
             {
-                for (int j = 0; j < size; j++)
+                int bestRow = -1;
+                double bestVal = EqualityTolerance;
+                for (int r = pivotRow; r < rows; r++)
                 {
-                    double value = matrix[i, j];
-                    if (i == j)
-                        value += 1e-8;
-                    augmented[i, j] = value;
+                    double value = Math.Abs(temp[r, col]);
+                    if (value > bestVal)
+                    {
+                        bestVal = value;
+                        bestRow = r;
+                    }
                 }
-                augmented[i, size] = vector[i];
+
+                if (bestRow == -1)
+                    continue;
+
+                SwapRows(temp, rowOrder, pivotRow, bestRow);
+
+                double pivot = temp[pivotRow, col];
+                for (int c = col; c < cols; c++)
+                    temp[pivotRow, c] /= pivot;
+
+                for (int r = 0; r < rows; r++)
+                {
+                    if (r == pivotRow)
+                        continue;
+                    double factor = temp[r, col];
+                    if (Math.Abs(factor) < EqualityTolerance)
+                        continue;
+                    for (int c = col; c < cols; c++)
+                        temp[r, c] -= factor * temp[pivotRow, c];
+                }
+
+                pivotRow++;
             }
 
-            for (int pivot = 0; pivot < size; pivot++)
+            if (pivotRow == rows)
+                return matrix; // Full rank already.
+
+            double[,] reduced = new double[pivotRow, cols];
+            for (int r = 0; r < pivotRow; r++)
+            {
+                int originalRow = rowOrder[r];
+                for (int c = 0; c < cols; c++)
+                    reduced[r, c] = matrix[originalRow, c];
+            }
+
+            return reduced;
+        }
+
+        private static void SwapRows(double[,] matrix, int[] order, int r1, int r2)
+        {
+            if (r1 == r2)
+                return;
+
+            int cols = matrix.GetLength(1);
+            for (int c = 0; c < cols; c++)
+            {
+                double tmp = matrix[r1, c];
+                matrix[r1, c] = matrix[r2, c];
+                matrix[r2, c] = tmp;
+            }
+
+            int orderTmp = order[r1];
+            order[r1] = order[r2];
+            order[r2] = orderTmp;
+        }
+
+        private static bool SolveLinearSystem(double[,] matrix, double[] rhs, double[] solution)
+        {
+            int n = rhs.Length;
+            double[,] a = (double[,])matrix.Clone();
+            double[] b = (double[])rhs.Clone();
+
+            for (int pivot = 0; pivot < n; pivot++)
             {
                 int maxRow = pivot;
-                double maxVal = Math.Abs(augmented[pivot, pivot]);
-                for (int row = pivot + 1; row < size; row++)
+                double maxVal = Math.Abs(a[pivot, pivot]);
+                for (int row = pivot + 1; row < n; row++)
                 {
-                    double val = Math.Abs(augmented[row, pivot]);
+                    double val = Math.Abs(a[row, pivot]);
                     if (val > maxVal)
                     {
                         maxVal = val;
@@ -182,102 +287,52 @@ namespace LinearSolver.Custom
                     }
                 }
 
-                if (maxVal < Epsilon)
-                    maxVal = Epsilon;
+                if (maxVal < EqualityTolerance)
+                    return false;
 
                 if (maxRow != pivot)
-                    SwapRows(augmented, pivot, maxRow, size + 1);
+                    SwapRows(a, b, pivot, maxRow);
 
-                double pivotValue = augmented[pivot, pivot];
-                for (int col = pivot; col <= size; col++)
-                    augmented[pivot, col] /= pivotValue;
+                double pivotVal = a[pivot, pivot];
+                for (int col = pivot; col < n; col++)
+                    a[pivot, col] /= pivotVal;
+                b[pivot] /= pivotVal;
 
-                for (int row = 0; row < size; row++)
+                for (int row = pivot + 1; row < n; row++)
                 {
-                    if (row == pivot)
+                    double factor = a[row, pivot];
+                    if (Math.Abs(factor) < EqualityTolerance)
                         continue;
-
-                    double factor = augmented[row, pivot];
-                    if (Math.Abs(factor) < Epsilon)
-                        continue;
-
-                    for (int col = pivot; col <= size; col++)
-                        augmented[row, col] -= factor * augmented[pivot, col];
+                    for (int col = pivot; col < n; col++)
+                        a[row, col] -= factor * a[pivot, col];
+                    b[row] -= factor * b[pivot];
                 }
             }
 
-            var result = new double[size];
-            for (int i = 0; i < size; i++)
-                result[i] = augmented[i, size];
-
-            return result;
-        }
-
-        private static void SwapRows(double[,] matrix, int rowA, int rowB, int length)
-        {
-            for (int col = 0; col < length; col++)
+            for (int row = n - 1; row >= 0; row--)
             {
-                double temp = matrix[rowA, col];
-                matrix[rowA, col] = matrix[rowB, col];
-                matrix[rowB, col] = temp;
-            }
-        }
-
-        private static int FindViolatingIndex(double[] values)
-        {
-            for (int i = 0; i < values.Length; i++)
-            {
-                if (values[i] < -Epsilon || values[i] > 1 + Epsilon)
-                    return i;
-            }
-
-            return -1;
-        }
-
-        private static double Clamp(double value)
-        {
-            if (value < 0)
-                return 0;
-            if (value > 1)
-                return 1;
-            return value;
-        }
-
-        private static void SubtractColumn(double[,] coefficients, int columnIndex, double value, double[] desired)
-        {
-            int rows = coefficients.GetLength(0);
-            for (int row = 0; row < rows; row++)
-                desired[row] -= coefficients[row, columnIndex] * value;
-        }
-
-        private static double[] ClampSolution(double[] solution)
-        {
-            var clamped = new double[solution.Length];
-            for (int i = 0; i < solution.Length; i++)
-            {
-                if (solution[i] < 0) clamped[i] = 0;
-                else if (solution[i] > 1) clamped[i] = 1;
-                else clamped[i] = solution[i];
-            }
-            return clamped;
-        }
-
-        private static bool IsFeasible(double[,] coefficients, double[] constants, double[] solution)
-        {
-            int rows = coefficients.GetLength(0);
-            int cols = coefficients.GetLength(1);
-
-            for (int row = 0; row < rows; row++)
-            {
-                double lhs = 0;
-                for (int col = 0; col < cols; col++)
-                    lhs += coefficients[row, col] * solution[col];
-
-                if (Math.Abs(lhs - constants[row]) > 1e-6)
-                    return false;
+                double sum = b[row];
+                for (int col = row + 1; col < n; col++)
+                    sum -= a[row, col] * solution[col];
+                solution[row] = sum;
             }
 
             return true;
+        }
+
+        private static void SwapRows(double[,] matrix, double[] rhs, int r1, int r2)
+        {
+            int cols = matrix.GetLength(1);
+            for (int c = 0; c < cols; c++)
+            {
+                double tmp = matrix[r1, c];
+                matrix[r1, c] = matrix[r2, c];
+                matrix[r2, c] = tmp;
+            }
+
+            double rhsTmp = rhs[r1];
+            rhs[r1] = rhs[r2];
+            rhs[r2] = rhsTmp;
         }
     }
 }

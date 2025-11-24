@@ -81,6 +81,15 @@ namespace RCS
             return matrix;
         }
 
+        private static double SelectDesired(double max, double min, double requested)
+        {
+            if (requested > 0)
+                return max;
+            if (requested < 0)
+                return min;
+            return 0;
+        }
+
         private static RcsVector CalculateResultantForce(
             IReadOnlyDictionary<string, RcsThruster> thrusters,
             IReadOnlyDictionary<string, double> outputs)
@@ -119,15 +128,6 @@ namespace RCS
             }
 
             return new RcsVector(tx, ty, tz);
-        }
-
-        private static double SelectDesired(double max, double min, double requested)
-        {
-            if (requested > 0)
-                return max;
-            if (requested < 0)
-                return min;
-            return 0;
         }
     }
 }

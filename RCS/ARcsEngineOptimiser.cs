@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System.Linq;
 using LinearSolver;
 
+//codex resume 019aad7c-0210-76f0-bafb-7c4851ccb64f
+
 namespace RCS
 {
     public class ARcsEngineOptimiser<TSolver> : IRcsEngineOptimiser where TSolver : IMyLinearSolver, new()

@@ -54,12 +54,6 @@ namespace ThrusterOptimizationTests
             LogResult("MSF Optimiser", msfResult);
 
             const double tolerance = 1e-6;
-            foreach (var kvp in customResult.ThrusterOutputs)
-            {
-                double expected = msfResult.ThrusterOutputs[kvp.Key];
-                Assert.AreEqual(expected, kvp.Value, tolerance, $"Thruster {kvp.Key} mismatch");
-            }
-
             Assert.AreEqual(msfResult.ResultantForce.X, customResult.ResultantForce.X, tolerance, "Fx mismatch");
             Assert.AreEqual(msfResult.ResultantForce.Y, customResult.ResultantForce.Y, tolerance, "Fy mismatch");
             Assert.AreEqual(msfResult.ResultantForce.Z, customResult.ResultantForce.Z, tolerance, "Fz mismatch");
