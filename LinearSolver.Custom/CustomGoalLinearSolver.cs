@@ -12,6 +12,8 @@ namespace LinearSolver.Custom
     public class CustomGoalLinearSolver : IMyLinearSolver
     {
         private const double EqualityTolerance = 1e-12;
+        private const double SoftZeroTolerance = 1e-8;
+        private const double SoftZeroWeight = 1e-3;
         private const double SnapTolerance = 1e-1;
 
         public double[] Solve(double[,] coefficients, double[] constants)
@@ -80,16 +82,7 @@ namespace LinearSolver.Custom
                     break;
             }
 
-            if (equalityMatrix.GetLength(0) > 0)
-            {
-                ProjectToEqualities(equalityMatrix, solution);
-                for (int i = 0; i < solution.Length; i++)
-                {
-                    if (solution[i] < 0) solution[i] = 0;
-                    else if (solution[i] > 1) solution[i] = 1;
-                    solution[i] = Snap(solution[i]);
-                }
-            }
+            EnforceEqualitiesWithBounds(equalityMatrix, solution);
 
             return solution;
         }
@@ -102,7 +95,9 @@ namespace LinearSolver.Custom
             for (int i = 0; i < constants.Length; i++)
             {
                 double importance = Math.Pow(baseWeight, constants.Length - i);
-                double magnitude = Math.Max(Math.Abs(constants[i]), 1.0);
+                double magnitude = Math.Abs(constants[i]) < SoftZeroTolerance
+                    ? SoftZeroWeight
+                    : Math.Max(Math.Abs(constants[i]), 1.0);
                 weights[i] = importance * magnitude;
             }
             return weights;
@@ -117,12 +112,16 @@ namespace LinearSolver.Custom
             {
                 if (Math.Abs(constants[row]) < EqualityTolerance)
                 {
-                    bool hasCoefficients = false;
-                    for (int col = 0; col < cols && !hasCoefficients; col++)
-                        hasCoefficients = Math.Abs(coefficients[row, col]) > EqualityTolerance;
+                    // Only enforce equality if this row is truly intended as hard zero (not soft zero).
+                    if (Math.Abs(constants[row]) < SoftZeroTolerance)
+                    {
+                        bool hasCoefficients = false;
+                        for (int col = 0; col < cols && !hasCoefficients; col++)
+                            hasCoefficients = Math.Abs(coefficients[row, col]) > EqualityTolerance;
 
-                    if (hasCoefficients)
-                        eqRows.Add(row);
+                        if (hasCoefficients)
+                            eqRows.Add(row);
+                    }
                 }
             }
 
@@ -334,6 +333,48 @@ namespace LinearSolver.Custom
             if (Math.Abs(value - 0.5) < SnapTolerance) return 0.5;
             if (Math.Abs(value - 1.0) < SnapTolerance) return 1.0;
             return value;
+        }
+
+        private static void EnforceEqualitiesWithBounds(double[,] equalityMatrix, double[] solution)
+        {
+            int eqCount = equalityMatrix.GetLength(0);
+            if (eqCount == 0)
+                return;
+
+            for (int i = 0; i < 20; i++)
+            {
+                ProjectToEqualities(equalityMatrix, solution);
+                for (int c = 0; c < solution.Length; c++)
+                {
+                    if (solution[c] < 0) solution[c] = 0;
+                    else if (solution[c] > 1) solution[c] = 1;
+                }
+
+                if (MaxEqualityResidual(equalityMatrix, solution) < 1e-6)
+                {
+                    for (int c = 0; c < solution.Length; c++)
+                        solution[c] = Snap(solution[c]);
+                    return;
+                }
+            }
+
+            // If still infeasible, return zeros to respect hard constraints.
+            Array.Clear(solution, 0, solution.Length);
+        }
+
+        private static double MaxEqualityResidual(double[,] equalityMatrix, double[] vector)
+        {
+            int eqCount = equalityMatrix.GetLength(0);
+            int cols = equalityMatrix.GetLength(1);
+            double max = 0;
+            for (int r = 0; r < eqCount; r++)
+            {
+                double sum = 0;
+                for (int c = 0; c < cols; c++)
+                    sum += equalityMatrix[r, c] * vector[c];
+                max = Math.Max(max, Math.Abs(sum));
+            }
+            return max;
         }
     }
 }
