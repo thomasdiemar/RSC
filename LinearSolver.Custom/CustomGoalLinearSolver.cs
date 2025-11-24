@@ -12,7 +12,7 @@ namespace LinearSolver.Custom
     public class CustomGoalLinearSolver : IMyLinearSolver
     {
         private const double EqualityTolerance = 1e-12;
-        private const double SnapTolerance = 2e-3;
+        private const double SnapTolerance = 1e-1;
 
         public double[] Solve(double[,] coefficients, double[] constants)
         {
@@ -29,6 +29,7 @@ namespace LinearSolver.Custom
             double[] weights = BuildPriorityWeights(constants);
             double[] solution = new double[cols];
             double[] gradient = new double[cols];
+            var equalityMatrix = BuildEqualityMatrix(coefficients, constants);
 
             const int maxIterations = 15000;
             const double step = 0.001;
@@ -43,7 +44,7 @@ namespace LinearSolver.Custom
                     for (int col = 0; col < cols; col++)
                         dot += coefficients[row, col] * solution[col];
 
-                    double desired = TargetForRow(constants[row]);
+                    double desired = constants[row];
                     double error = dot - desired;
                     double weight = weights[row];
 
@@ -65,11 +66,20 @@ namespace LinearSolver.Custom
                     solution[col] = newValue;
                 }
 
+                if (equalityMatrix.GetLength(0) > 0)
+                {
+                    ProjectToEqualities(equalityMatrix, solution);
+                    for (int i = 0; i < solution.Length; i++)
+                    {
+                        if (solution[i] < 0) solution[i] = 0;
+                        else if (solution[i] > 1) solution[i] = 1;
+                    }
+                }
+
                 if (maxDelta < 1e-9)
                     break;
             }
 
-            var equalityMatrix = BuildEqualityMatrix(coefficients, constants);
             if (equalityMatrix.GetLength(0) > 0)
             {
                 ProjectToEqualities(equalityMatrix, solution);
@@ -82,13 +92,6 @@ namespace LinearSolver.Custom
             }
 
             return solution;
-        }
-
-        private static double TargetForRow(double constant)
-        {
-            if (constant > 0) return 1;   // maximise
-            if (constant < 0) return 0;   // minimise
-            return 0;                     // equality to zero
         }
 
         private static double[] BuildPriorityWeights(double[] constants)

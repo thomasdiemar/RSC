@@ -1,8 +1,7 @@
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using LinearSolver.Custom;
 using RCS;
-using RCS.Custom;
 using RCS.MSF;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ThrusterOptimizationTests
 {
@@ -11,7 +10,7 @@ namespace ThrusterOptimizationTests
     {
         public TestContext TestContext { get; set; } = null!;
 
-        private readonly CustomRcsEngineOptimiser customOptimiser = new CustomRcsEngineOptimiser();
+        private readonly ARcsEngineOptimiser<CustomGoalLinearSolver> customOptimiser = new ARcsEngineOptimiser<CustomGoalLinearSolver>();
         private readonly MfsRcsEngineOptimiser mfsOptimiser = new MfsRcsEngineOptimiser();
 
         [TestMethod] public void MaxFx_MatchesMsf() => AssertOptimisersMatch(new RcsVector(1, 0, 0), new RcsVector());
