@@ -69,6 +69,20 @@ namespace ThrusterOptimizationTests
         [TestMethod] public void FourFx_Thrusters_MaxTz_MatchesMsf() => AssertOptimisersMatch4Fx(new RcsVector(), new RcsVector(0, 0, 1));
         [TestMethod] public void FourFx_Thrusters_MinTz_MatchesMsf() => AssertOptimisersMatch4Fx(new RcsVector(), new RcsVector(0, 0, -1));
 
+        [TestMethod] public void Random2Fx_Thrusters_MaxFx_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(1, 0, 0), new RcsVector());
+        [TestMethod] public void Random2Fx_Thrusters_MinFx_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(-1, 0, 0), new RcsVector());
+        [TestMethod] public void Random2Fx_Thrusters_MaxFy_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(0, 1, 0), new RcsVector());
+        [TestMethod] public void Random2Fx_Thrusters_MinFy_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(0, -1, 0), new RcsVector());
+        [TestMethod] public void Random2Fx_Thrusters_MaxFz_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(0, 0, 1), new RcsVector());
+        [TestMethod] public void Random2Fx_Thrusters_MinFz_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(0, 0, -1), new RcsVector());
+
+        [TestMethod] public void Random2Fx_Thrusters_MaxTx_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(), new RcsVector(1, 0, 0));
+        [TestMethod] public void Random2Fx_Thrusters_MinTx_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(), new RcsVector(-1, 0, 0));
+        [TestMethod] public void Random2Fx_Thrusters_MaxTy_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(), new RcsVector(0, 1, 0));
+        [TestMethod] public void Random2Fx_Thrusters_MinTy_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(), new RcsVector(0, -1, 0));
+        [TestMethod] public void Random2Fx_Thrusters_MaxTz_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(), new RcsVector(0, 0, 1));
+        [TestMethod] public void Random2Fx_Thrusters_MinTz_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(), new RcsVector(0, 0, -1));
+
         private void AssertOptimisersMatch(RcsVector desiredForce, RcsVector desiredTorque)
         {
             var engine = new RcsEngine(ThrusterTestData.CreateThrusters());
@@ -144,13 +158,39 @@ namespace ThrusterOptimizationTests
         private void AssertOptimisersMatch4Fx(RcsVector desiredForce, RcsVector desiredTorque)
         {
             var engine = new RcsEngine(ThrusterTestData.CreateThrusters4Fx());
-            var command = new RcsCommand(desiredForce, desiredTorque, true);
+            var command = new RcsCommand(desiredForce, desiredTorque, allowNonCommandedForces: true, allowNonCommandedTorques: true);
 
             var customResult = customOptimiser.Optimise(engine, command).Last().Result;
             var msfResult = msfOptimiser.Optimise(engine, command).Last().Result;
 
             LogResult("Custom Optimiser (4Fx)", customResult);
             LogResult("MSF Optimiser (4Fx)", msfResult);
+
+            const double tolerance = 1e-6;
+            foreach (var kvp in customResult.ThrusterOutputs)
+            {
+                double expected = msfResult.ThrusterOutputs[kvp.Key];
+                Assert.AreEqual(expected, kvp.Value, tolerance, $"Thruster {kvp.Key} mismatch");
+            }
+
+            Assert.AreEqual(msfResult.ResultantForce.X, customResult.ResultantForce.X, tolerance, "Fx mismatch");
+            Assert.AreEqual(msfResult.ResultantForce.Y, customResult.ResultantForce.Y, tolerance, "Fy mismatch");
+            Assert.AreEqual(msfResult.ResultantForce.Z, customResult.ResultantForce.Z, tolerance, "Fz mismatch");
+            Assert.AreEqual(msfResult.ResultantTorque.X, customResult.ResultantTorque.X, tolerance, "Tx mismatch");
+            Assert.AreEqual(msfResult.ResultantTorque.Y, customResult.ResultantTorque.Y, tolerance, "Ty mismatch");
+            Assert.AreEqual(msfResult.ResultantTorque.Z, customResult.ResultantTorque.Z, tolerance, "Tz mismatch");
+        }
+
+        private void AssertOptimisersMatchRandom2Fx(RcsVector desiredForce, RcsVector desiredTorque)
+        {
+            var engine = new RcsEngine(ThrusterTestData.CreateThrustersRandom2Fx());
+            var command = new RcsCommand(desiredForce, desiredTorque, allowNonCommandedForces: true, allowNonCommandedTorques: true);
+
+            var customResult = customOptimiser.Optimise(engine, command).Last().Result;
+            var msfResult = msfOptimiser.Optimise(engine, command).Last().Result;
+
+            LogResult("Custom Optimiser (Random2Fx)", customResult);
+            LogResult("MSF Optimiser (Random2Fx)", msfResult);
 
             const double tolerance = 1e-6;
             foreach (var kvp in customResult.ThrusterOutputs)
