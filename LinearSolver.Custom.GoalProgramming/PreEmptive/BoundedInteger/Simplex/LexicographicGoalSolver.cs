@@ -85,7 +85,10 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 throw new ArgumentException("Constants vector length must match coefficient rows.", nameof(constants));
             }
 
-            double[] levels = new[] { 0.0, 0.5, 1.0 };
+            const int granularity = 4; // 0,0.25,0.5,0.75,1 to allow finer adjustments than the original {0,0.5,1}
+            double[] levels = Enumerable.Range(0, granularity + 1)
+                .Select(i => i / (double)granularity)
+                .ToArray();
             double[] best = null;
             double[] bestScores = null;
             int[] priorityOrder = BuildPriorityOrder(constants);
