@@ -66,18 +66,6 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 throw new ArgumentException("Constants vector length must match coefficient rows.", nameof(constants));
             }
 
-            // Exhaustive bounded search for small systems to find a feasible/optimal thrust pattern.
-            if (cols <= 12)
-            {
-                var best = ExhaustiveSearch(coefficients, constants);
-                yield return new MyProgress<double[]>
-                {
-                    Result = best,
-                    Done = true
-                };
-                yield break;
-            }
-
             var tableau = BuildTableau(coefficients, constants);
             int columnCount = tableau.ColumnCount;
 
@@ -99,98 +87,6 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                     Done = snapshot.Done
                 };
             }
-        }
-
-        private double[] ExhaustiveSearch(double[,] coefficients, double[] constants)
-        {
-            int rows = coefficients.GetLength(0);
-            int cols = coefficients.GetLength(1);
-            double[] levels = new[] { 0.0, 0.5, 1.0 };
-
-            // Identify first commanded row as primary target.
-            int targetRow = -1;
-            double targetSign = 0;
-            for (int r = 0; r < rows; r++)
-            {
-                if (double.IsNaN(constants[r]) || Math.Abs(constants[r]) < 1e-9)
-                {
-                    continue;
-                }
-
-                targetRow = r;
-                targetSign = constants[r] > 0 ? 1 : -1;
-                break;
-            }
-
-            double bestScore = double.NegativeInfinity;
-            double[] best = new double[cols];
-            const double hardPenaltyWeight = 1000.0;
-            const double softPenaltyWeight = 0.05;
-            var current = new double[cols];
-
-            void Evaluate()
-            {
-                double[] rowValues = new double[rows];
-                for (int r = 0; r < rows; r++)
-                {
-                    double sum = 0;
-                    for (int c = 0; c < cols; c++)
-                    {
-                        sum += coefficients[r, c] * current[c];
-                    }
-                    rowValues[r] = sum;
-                }
-
-                double targetValue = targetRow >= 0 ? rowValues[targetRow] * targetSign : 0;
-                double penalty = 0;
-                for (int r = 0; r < rows; r++)
-                {
-                    if (r == targetRow) continue;
-
-                    double weight;
-                    if (double.IsNaN(constants[r]))
-                    {
-                        // Soft rows should bias toward low spillover but never block feasible torque/force generation.
-                        weight = softPenaltyWeight;
-                    }
-                    else if (Math.Abs(constants[r]) < 1e-9)
-                    {
-                        // Hard zero rows (no non-commanded output allowed) must stay near zero.
-                        weight = hardPenaltyWeight;
-                    }
-                    else
-                    {
-                        weight = hardPenaltyWeight;
-                    }
-
-                    penalty += weight * Math.Abs(rowValues[r]);
-                }
-
-                double score = targetValue - penalty;
-                if (score > bestScore + 1e-9)
-                {
-                    bestScore = score;
-                    Array.Copy(current, best, cols);
-                }
-            }
-
-            void Search(int idx)
-            {
-                if (idx == cols)
-                {
-                    Evaluate();
-                    return;
-                }
-
-                foreach (var level in levels)
-                {
-                    current[idx] = level;
-                    Search(idx + 1);
-                }
-            }
-
-            Search(0);
-            return best;
         }
 
         private PreEmptiveIntegerTableau BuildTableau(double[,] coefficients, double[] constants)
