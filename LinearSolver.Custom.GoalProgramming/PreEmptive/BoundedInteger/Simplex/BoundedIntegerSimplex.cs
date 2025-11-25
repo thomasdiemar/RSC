@@ -52,6 +52,14 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             var constraintRows = new List<int>();
             var constraintValues = new List<double>();
             var targetRows = new List<int>();
+            var allRightHandSides = new double[tableau.RowCount];
+            var allTolerances = new double[tableau.RowCount];
+
+            for (int r = 0; r < tableau.RowCount; r++)
+            {
+                allRightHandSides[r] = (double)tableau.GetRightHandSide(r);
+                allTolerances[r] = (double)tableau.RowGoals[r].Tolerance;
+            }
 
             for (int r = 0; r < tableau.RowCount; r++)
             {
@@ -96,9 +104,18 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 return new SimplexResult(SimplexStatus.Optimal, objectiveValue, diagnostics, tableau.ColumnHeaders.Select(v => v.Clone()).ToList());
             }
 
-            if (targetRows.Count == 0 && constraintRows.Count > 0)
+            if (targetRows.Count > 0)
             {
-                var feasible = SolveEnumerating(coefficients, constraintRows, constraintValues, targetRow: -1, targetSign: 0);
+                foreach (var targetRow in targetRows)
+                {
+                    constraintRows.Add(targetRow);
+                    constraintValues.Add(allRightHandSides[targetRow]);
+                }
+            }
+
+            if (constraintRows.Count > 0)
+            {
+                var feasible = SolveEnumerating(coefficients, constraintRows, constraintValues, targetRow: -1, targetSign: 0, allRightHandSides, allTolerances);
                 if (feasible == null)
                 {
                     return CreateResult(SimplexStatus.GoalViolation, objectiveValue, diagnostics, tableau);
@@ -106,27 +123,6 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
 
                 solution = feasible;
                 objectiveValue = new Fraction(0);
-            }
-            else
-            {
-                foreach (var targetRow in targetRows)
-                {
-                    var sense = tableau.RowGoals[targetRow].Sense;
-                    var targetSign = sense == GoalSense.Minimize ? -1 : 1;
-
-                    var candidate = SolveEnumerating(coefficients, constraintRows, constraintValues, targetRow, targetSign);
-                    if (candidate == null)
-                    {
-                        return CreateResult(SimplexStatus.GoalViolation, objectiveValue, diagnostics, tableau);
-                    }
-
-                    solution = candidate;
-                    var achieved = EvaluateRow(coefficients, targetRow, solution);
-                    objectiveValue = ToFraction(targetSign * achieved);
-
-                    constraintRows.Add(targetRow);
-                    constraintValues.Add(achieved);
-                }
             }
 
             for (int i = 0; i < tableau.ColumnCount; i++)
@@ -387,7 +383,9 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             IList<int> constraintRows,
             IList<double> constraintValues,
             int targetRow,
-            int targetSign)
+            int targetSign,
+            double[] allRightHandSides,
+            double[] allTolerances)
         {
             int cols = coefficients.GetLength(1);
             var independentRows = GetIndependentRows(coefficients, constraintRows);
@@ -399,30 +397,31 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             }
             var independentValues = independentRows.Select(row => constraintValueMap[row]).ToArray();
             double bestObjective = double.NegativeInfinity;
+            double bestPenalty = double.PositiveInfinity;
             double bestThrust = double.PositiveInfinity;
             double[] best = null;
             const double eps = 1e-6;
 
             if (constraintCount == 0)
             {
-                var candidate = new double[cols];
-                if (targetRow >= 0)
+                foreach (var assignment in EnumerateBinary(cols))
                 {
-                    for (int c = 0; c < cols; c++)
+                    var candidate = assignment.Select(v => v ? 1.0 : 0.0).ToArray();
+                    double objective = targetRow >= 0 ? EvaluateRow(coefficients, targetRow, candidate) * targetSign : 0;
+                    double penalty = ComputePenalty(coefficients, candidate, targetRow, allRightHandSides, allTolerances);
+                    double thrustSum = candidate.Sum();
+                    if (objective > bestObjective + 1e-9 ||
+                        (Math.Abs(objective - bestObjective) <= 1e-9 && penalty < bestPenalty - 1e-9) ||
+                        (Math.Abs(objective - bestObjective) <= 1e-9 && Math.Abs(penalty - bestPenalty) <= 1e-9 && thrustSum < bestThrust - 1e-9))
                     {
-                        double coeff = coefficients[targetRow, c] * targetSign;
-                        candidate[c] = coeff >= 0 ? 1.0 : 0.0;
+                        bestObjective = objective;
+                        bestPenalty = penalty;
+                        bestThrust = thrustSum;
+                        best = candidate;
                     }
-
-                    bestObjective = EvaluateRow(coefficients, targetRow, candidate) * targetSign;
-                }
-                else
-                {
-                    Array.Clear(candidate, 0, candidate.Length);
-                    bestObjective = 0;
                 }
 
-                return candidate;
+                return best;
             }
 
             var allIndices = Enumerable.Range(0, cols).ToArray();
@@ -491,11 +490,14 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                     }
 
                     double objective = targetRow >= 0 ? EvaluateRow(coefficients, targetRow, candidate) * targetSign : 0;
+                    double penalty = ComputePenalty(coefficients, candidate, targetRow, allRightHandSides, allTolerances);
                     double thrustSum = candidate.Sum();
                     if (objective > bestObjective + 1e-9 ||
-                        (Math.Abs(objective - bestObjective) <= 1e-9 && thrustSum < bestThrust - 1e-9))
+                        (Math.Abs(objective - bestObjective) <= 1e-9 && penalty < bestPenalty - 1e-9) ||
+                        (Math.Abs(objective - bestObjective) <= 1e-9 && Math.Abs(penalty - bestPenalty) <= 1e-9 && thrustSum < bestThrust - 1e-9))
                     {
                         bestObjective = objective;
+                        bestPenalty = penalty;
                         bestThrust = thrustSum;
                         best = candidate;
                     }
@@ -774,6 +776,42 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             }
 
             return total;
+        }
+
+        private static double ComputePenalty(
+            double[,] coefficients,
+            double[] candidate,
+            int targetRow,
+            double[] allRightHandSides,
+            double[] allTolerances)
+        {
+            double penalty = 0;
+            int rows = coefficients.GetLength(0);
+            const double softWeight = 0.01;
+            const double hardWeight = 1000.0;
+            for (int r = 0; r < rows; r++)
+            {
+                if (r == targetRow)
+                {
+                    continue;
+                }
+
+                double tolerance = r < allTolerances.Length ? allTolerances[r] : 0;
+                bool isSoft = tolerance >= 1e6;
+                double desired = r < allRightHandSides.Length ? allRightHandSides[r] : 0;
+                double value = EvaluateRow(coefficients, r, candidate);
+                double delta = Math.Abs(value - desired);
+                if (isSoft)
+                {
+                    penalty += softWeight * delta;
+                }
+                else
+                {
+                    penalty += hardWeight * delta;
+                }
+            }
+
+            return penalty;
         }
 
         private static Fraction ToFraction(double value)

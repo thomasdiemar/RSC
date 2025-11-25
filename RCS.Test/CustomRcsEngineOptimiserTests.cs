@@ -69,33 +69,33 @@ namespace ThrusterOptimizationTests
         [TestMethod] public void FourFx_Thrusters_MaxTz_MatchesMsf() => AssertOptimisersMatch4Fx(new RcsVector(), new RcsVector(0, 0, 1));
         [TestMethod] public void FourFx_Thrusters_MinTz_MatchesMsf() => AssertOptimisersMatch4Fx(new RcsVector(), new RcsVector(0, 0, -1));
 
-        [Ignore][TestMethod] public void Random2Fx_Thrusters_MaxFx_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(1, 0, 0), new RcsVector());
-        [Ignore][TestMethod] public void Random2Fx_Thrusters_MinFx_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(-1, 0, 0), new RcsVector());
-        [Ignore][TestMethod] public void Random2Fx_Thrusters_MaxFy_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(0, 1, 0), new RcsVector());
-        [Ignore][TestMethod] public void Random2Fx_Thrusters_MinFy_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(0, -1, 0), new RcsVector());
-        [Ignore][TestMethod] public void Random2Fx_Thrusters_MaxFz_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(0, 0, 1), new RcsVector());
-        [Ignore][TestMethod] public void Random2Fx_Thrusters_MinFz_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(0, 0, -1), new RcsVector());
+        [TestMethod] public void Random2Fx_Thrusters_MaxFx_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(1, 0, 0), new RcsVector());
+        [TestMethod] public void Random2Fx_Thrusters_MinFx_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(-1, 0, 0), new RcsVector());
+        [TestMethod] public void Random2Fx_Thrusters_MaxFy_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(0, 1, 0), new RcsVector());
+        [TestMethod] public void Random2Fx_Thrusters_MinFy_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(0, -1, 0), new RcsVector());
+        [TestMethod] public void Random2Fx_Thrusters_MaxFz_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(0, 0, 1), new RcsVector());
+        [TestMethod] public void Random2Fx_Thrusters_MinFz_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(0, 0, -1), new RcsVector());
 
-        [Ignore][TestMethod] public void Random2Fx_Thrusters_MaxTx_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(), new RcsVector(1, 0, 0));
-        [Ignore][TestMethod] public void Random2Fx_Thrusters_MinTx_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(), new RcsVector(-1, 0, 0));
-        [Ignore][TestMethod] public void Random2Fx_Thrusters_MaxTy_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(), new RcsVector(0, 1, 0));
-        [Ignore][TestMethod] public void Random2Fx_Thrusters_MinTy_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(), new RcsVector(0, -1, 0));
-        [Ignore][TestMethod] public void Random2Fx_Thrusters_MaxTz_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(), new RcsVector(0, 0, 1));
-        [Ignore][TestMethod] public void Random2Fx_Thrusters_MinTz_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(), new RcsVector(0, 0, -1));
+        [TestMethod] public void Random2Fx_Thrusters_MaxTx_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(), new RcsVector(1, 0, 0));
+        [TestMethod] public void Random2Fx_Thrusters_MinTx_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(), new RcsVector(-1, 0, 0));
+        [TestMethod] public void Random2Fx_Thrusters_MaxTy_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(), new RcsVector(0, 1, 0));
+        [TestMethod] public void Random2Fx_Thrusters_MinTy_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(), new RcsVector(0, -1, 0));
+        [TestMethod] public void Random2Fx_Thrusters_MaxTz_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(), new RcsVector(0, 0, 1));
+        [TestMethod] public void Random2Fx_Thrusters_MinTz_MatchesMsf() => AssertOptimisersMatchRandom2Fx(new RcsVector(), new RcsVector(0, 0, -1));
 
-        [Ignore][TestMethod] public void RandomFx_Thrusters_MaxFx_MatchesMsf() => AssertOptimisersMatchRandomFx(new RcsVector(1, 0, 0), new RcsVector());
-        [Ignore][TestMethod] public void RandomFx_Thrusters_MinFx_MatchesMsf() => AssertOptimisersMatchRandomFx(new RcsVector(-1, 0, 0), new RcsVector());
-        [Ignore][TestMethod] public void RandomFx_Thrusters_MaxFy_MatchesMsf() => AssertOptimisersMatchRandomFx(new RcsVector(0, 1, 0), new RcsVector());
-        [Ignore][TestMethod] public void RandomFx_Thrusters_MinFy_MatchesMsf() => AssertOptimisersMatchRandomFx(new RcsVector(0, -1, 0), new RcsVector());
-        [Ignore][TestMethod] public void RandomFx_Thrusters_MaxFz_MatchesMsf() => AssertOptimisersMatchRandomFx(new RcsVector(0, 0, 1), new RcsVector());
-        [Ignore][TestMethod] public void RandomFx_Thrusters_MinFz_MatchesMsf() => AssertOptimisersMatchRandomFx(new RcsVector(0, 0, -1), new RcsVector());
+        [TestMethod] public void RandomFx_Thrusters_MaxFx_MatchesMsf() => AssertOptimisersMatchRandomFx(new RcsVector(1, 0, 0), new RcsVector());
+        [TestMethod] public void RandomFx_Thrusters_MinFx_MatchesMsf() => AssertOptimisersMatchRandomFx(new RcsVector(-1, 0, 0), new RcsVector());
+        [TestMethod] public void RandomFx_Thrusters_MaxFy_MatchesMsf() => AssertOptimisersMatchRandomFx(new RcsVector(0, 1, 0), new RcsVector());
+        [TestMethod] public void RandomFx_Thrusters_MinFy_MatchesMsf() => AssertOptimisersMatchRandomFx(new RcsVector(0, -1, 0), new RcsVector());
+        [TestMethod] public void RandomFx_Thrusters_MaxFz_MatchesMsf() => AssertOptimisersMatchRandomFx(new RcsVector(0, 0, 1), new RcsVector());
+        [TestMethod] public void RandomFx_Thrusters_MinFz_MatchesMsf() => AssertOptimisersMatchRandomFx(new RcsVector(0, 0, -1), new RcsVector());
 
-        [Ignore][TestMethod] public void RandomFx_Thrusters_MaxTx_MatchesMsf() => AssertOptimisersMatchRandomFx(new RcsVector(), new RcsVector(1, 0, 0));
-        [Ignore][TestMethod] public void RandomFx_Thrusters_MinTx_MatchesMsf() => AssertOptimisersMatchRandomFx(new RcsVector(), new RcsVector(-1, 0, 0));
-        [Ignore][TestMethod] public void RandomFx_Thrusters_MaxTy_MatchesMsf() => AssertOptimisersMatchRandomFx(new RcsVector(), new RcsVector(0, 1, 0));
-        [Ignore][TestMethod] public void RandomFx_Thrusters_MinTy_MatchesMsf() => AssertOptimisersMatchRandomFx(new RcsVector(), new RcsVector(0, -1, 0));
-        [Ignore][TestMethod] public void RandomFx_Thrusters_MaxTz_MatchesMsf() => AssertOptimisersMatchRandomFx(new RcsVector(), new RcsVector(0, 0, 1));
-        [Ignore][TestMethod] public void RandomFx_Thrusters_MinTz_MatchesMsf() => AssertOptimisersMatchRandomFx(new RcsVector(), new RcsVector(0, 0, -1));
+        [TestMethod] public void RandomFx_Thrusters_MaxTx_MatchesMsf() => AssertOptimisersMatchRandomFx(new RcsVector(), new RcsVector(1, 0, 0));
+        [TestMethod] public void RandomFx_Thrusters_MinTx_MatchesMsf() => AssertOptimisersMatchRandomFx(new RcsVector(), new RcsVector(-1, 0, 0));
+        [TestMethod] public void RandomFx_Thrusters_MaxTy_MatchesMsf() => AssertOptimisersMatchRandomFx(new RcsVector(), new RcsVector(0, 1, 0));
+        [TestMethod] public void RandomFx_Thrusters_MinTy_MatchesMsf() => AssertOptimisersMatchRandomFx(new RcsVector(), new RcsVector(0, -1, 0));
+        [TestMethod] public void RandomFx_Thrusters_MaxTz_MatchesMsf() => AssertOptimisersMatchRandomFx(new RcsVector(), new RcsVector(0, 0, 1));
+        [TestMethod] public void RandomFx_Thrusters_MinTz_MatchesMsf() => AssertOptimisersMatchRandomFx(new RcsVector(), new RcsVector(0, 0, -1));
 
         private void AssertOptimisersMatch(RcsVector desiredForce, RcsVector desiredTorque)
         {
