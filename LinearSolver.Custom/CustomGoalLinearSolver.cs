@@ -16,7 +16,13 @@ namespace LinearSolver.Custom
         private const double SoftZeroWeight = 1e-3;
         private const double SnapTolerance = 1e-1;
 
-        public double[] Solve(double[,] coefficients, double[] constants)
+        /// <summary>
+        /// Explore bounded thrust assignments ({0,0.5,1}) and pick the lexicographically best candidate per weighted goals.
+        /// </summary>
+        /// <summary>
+        /// Explore bounded thrust assignments ({0,0.5,1}) and pick the lexicographically best candidate per weighted goals.
+        /// </summary>
+        private double[] SolveCore(double[,] coefficients, double[] constants)
         {
             if (coefficients == null)
                 throw new ArgumentNullException(nameof(coefficients));
@@ -28,65 +34,141 @@ namespace LinearSolver.Custom
             if (constants.Length != rows)
                 throw new ArgumentException("Constants vector dimension mismatch.", nameof(constants));
 
-            double[] weights = BuildPriorityWeights(constants);
-            double[] solution = new double[cols];
-            double[] gradient = new double[cols];
-            var equalityMatrix = BuildEqualityMatrix(coefficients, constants);
+            // Exhaustive search over {0,0.5,1} per thruster to mirror MSF extreme-point behaviour.
+            double[] levels = new[] { 0.0, 0.5, 1.0 };
+            double[] best = null;
+            double[] bestScores = null;
+            int[] priorityOrder = BuildPriorityOrder(constants);
 
-            const int maxIterations = 15000;
-            const double step = 0.001;
+            var current = new double[cols];
+            Explore(0);
+            return best ?? new double[cols];
 
-            for (int iteration = 0; iteration < maxIterations; iteration++)
+            void Explore(int index)
             {
-                Array.Clear(gradient, 0, gradient.Length);
-
-                for (int row = 0; row < rows; row++)
+                if (index == cols)
                 {
-                    double dot = 0;
-                    for (int col = 0; col < cols; col++)
-                        dot += coefficients[row, col] * solution[col];
-
-                    double desired = double.IsNaN(constants[row]) ? 0.0 : constants[row];
-                    double error = dot - desired;
-                    double weight = weights[row];
-
-                    for (int col = 0; col < cols; col++)
-                        gradient[col] += weight * error * coefficients[row, col];
+                    EvaluateCandidate();
+                    return;
                 }
 
-                double maxDelta = 0;
-                for (int col = 0; col < cols; col++)
+                for (int i = 0; i < levels.Length; i++)
                 {
-                    double newValue = solution[col] - step * gradient[col];
-                    if (newValue < 0) newValue = 0;
-                    else if (newValue > 1) newValue = 1;
+                    current[index] = levels[i];
+                    Explore(index + 1);
+                }
+            }
 
-                    double delta = Math.Abs(newValue - solution[col]);
-                    if (delta > maxDelta)
-                        maxDelta = delta;
-
-                    solution[col] = newValue;
+            void EvaluateCandidate()
+            {
+                double[] rowValues = new double[rows];
+                for (int r = 0; r < rows; r++)
+                {
+                    double sum = 0;
+                    for (int c = 0; c < cols; c++)
+                        sum += coefficients[r, c] * current[c];
+                    rowValues[r] = sum;
                 }
 
-                if (equalityMatrix.GetLength(0) > 0)
+                // Reject hard equalities that are off tolerance.
+                for (int r = 0; r < rows; r++)
                 {
-                    ProjectToEqualities(equalityMatrix, solution);
-                    for (int i = 0; i < solution.Length; i++)
+                    if (double.IsNaN(constants[r]))
+                        continue;
+                    if (Math.Abs(constants[r]) < SoftZeroTolerance && Math.Abs(rowValues[r]) > 1e-6)
+                        return;
+                }
+
+                double[] scores = new double[rows];
+                for (int r = 0; r < rows; r++)
+                {
+                    double desired = constants[r];
+                    if (double.IsNaN(desired))
                     {
-                        if (solution[i] < 0) solution[i] = 0;
-                        else if (solution[i] > 1) solution[i] = 1;
+                        scores[r] = -Math.Abs(rowValues[r]);
+                    }
+                    else if (desired > 0)
+                    {
+                        scores[r] = rowValues[r];
+                    }
+                    else if (desired < 0)
+                    {
+                        scores[r] = -rowValues[r];
+                    }
+                    else
+                    {
+                        scores[r] = -Math.Abs(rowValues[r]); // equality rows prefer zero.
                     }
                 }
 
-                if (maxDelta < 1e-9)
-                    break;
+                if (best == null || LexicographicallyBetter(scores, bestScores))
+                {
+                    best = (double[])current.Clone();
+                    bestScores = scores;
+                }
             }
 
-            EnforceEqualitiesWithBounds(equalityMatrix, solution);
-
-            return solution;
+            bool LexicographicallyBetter(double[] candidate, double[] incumbent)
+            {
+                for (int pi = 0; pi < priorityOrder.Length; pi++)
+                {
+                    int idx = priorityOrder[pi];
+                    if (Math.Abs(candidate[idx] - incumbent[idx]) < 1e-9)
+                        continue;
+                    return candidate[idx] > incumbent[idx];
+                }
+                return false;
+            }
         }
 
+        private static int[] BuildPriorityOrder(double[] constants)
+        {
+            var primary = new List<int>();
+            var equalities = new List<int>();
+            var softZeros = new List<int>();
+
+            for (int i = 0; i < constants.Length; i++)
+            {
+                if (double.IsNaN(constants[i]))
+                    softZeros.Add(i);
+                else if (Math.Abs(constants[i]) < SoftZeroTolerance)
+                    equalities.Add(i);
+                else
+                    primary.Add(i);
+            }
+
+            var order = new int[constants.Length];
+            int idxOut = 0;
+            foreach (var i in primary) order[idxOut++] = i;
+            foreach (var i in equalities) order[idxOut++] = i;
+            foreach (var i in softZeros) order[idxOut++] = i;
+            return order;
+        }
+
+        /// <summary>
+        /// Emit a single progress snapshot containing the best solution found.
+        /// </summary>
+        /// <summary>
+        /// Emit a single progress snapshot containing the best solution found.
+        /// </summary>
+        public IEnumerable<MyProgress<double[]>> Solve(double[,] coefficients, double[] constants)
+        {
+            var result = SolveCore(coefficients, constants);
+            yield return CreateProgress(result);
+        }
+
+        private static MyProgress<double[]> CreateProgress(double[] snapshot)
+        {
+            return new MyProgress<double[]>
+            {
+                Result = (double[])snapshot.Clone(),
+                Done = true
+            };
+        }
+
+        /// <summary>
+        /// Build exponentially decreasing weights to approximate lexicographic goal ordering.
+        /// </summary>
         private static double[] BuildPriorityWeights(double[] constants)
         {
             double[] weights = new double[constants.Length];
@@ -96,8 +178,10 @@ namespace LinearSolver.Custom
             {
                 double importance = Math.Pow(baseWeight, constants.Length - i);
                 double magnitude;
-                if (double.IsNaN(constants[i]) || Math.Abs(constants[i]) < SoftZeroTolerance)
+                if (double.IsNaN(constants[i]))
                     magnitude = SoftZeroWeight;
+                else if (Math.Abs(constants[i]) < SoftZeroTolerance)
+                    magnitude = 1.0;
                 else
                     magnitude = Math.Max(Math.Abs(constants[i]), 1.0);
                 weights[i] = importance * magnitude;

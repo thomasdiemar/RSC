@@ -4,17 +4,17 @@ This solution explores attitude/translation control for reaction control systems
 
 ## Projects
 - `RCS` – core domain types (vectors, thrusters, engine, command) plus the generic `RcsEngineOptimiser` that builds the coefficient matrix and desired vector from a fleet of thrusters.
-- `RCS.Custom` – optimiser wired to a custom goal solver (`CustomGoalLinearSolver`) that approximates lexicographic goals without MSF dependencies.
-- `RCS.MSF` – optimiser wired to the Microsoft Solver Foundation goal-based solver (`MsfGoalLinearSolver`) for a reference implementation.
-- `LinearSolver` – shared solver interface.
+- `RCS.Custom` – optimiser wired to a custom goal solver (`CustomGoalLinearSolver`) that searches bounded thrust levels without MSF.
+- `RCS.MSF` – optimiser wired to the Microsoft Solver Foundation goal-based solver (`MsfGoalLinearSolver`) as the reference implementation.
+- `LinearSolver` – shared solver interface and progress type.
 - `LinearSolver.Custom` / `LinearSolver.MSF` – concrete solver implementations for the custom and MSF paths.
-- `RCS.Test` – MSTest suite that validates solver behaviour across several thruster layouts (12 thrusters, 3Fx, 4Fx) and all force/torque directions, including soft-goal scenarios.
+- `RCS.Test` – MSTest suite that validates solver behaviour across several thruster layouts (12 thrusters, 3Fx, 3Opposite, 4Fx) and all force/torque directions, including soft-goal scenarios.
 
 ## How it works
 1. `RcsEngineOptimiser` orders thrusters, builds a 6×N coefficient matrix (Fx/Fy/Fz/Tx/Ty/Tz rows), and derives desired row targets from an `RcsCommand`.
 2. `RcsCommand` can request forces/torques and optionally allow non-commanded axes to be treated as soft goals (encoded as `double.NaN` in the desired vector).
-3. The linear solver returns per‑thruster outputs, which are mapped back to a result with resultant force/torque for verification.
-4. Tests assert that the custom and MSF optimisers agree on outputs and resultant vectors for each scenario.
+3. The linear solver streams progress snapshots of per‑thruster outputs; the optimiser maps each snapshot to resultant force/torque.
+4. Tests assert that the custom and MSF optimisers agree on outputs and resultant vectors for each scenario, across multiple thruster layouts.
 
 ## Running tests
 ```pwsh

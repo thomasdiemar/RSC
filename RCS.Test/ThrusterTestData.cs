@@ -44,5 +44,19 @@ namespace ThrusterOptimizationTests
                 ["T4"] = new RcsThruster(new RcsVector(0, 0, 1), new RcsVector(-1, -1, 0)),
             };
         }
+
+        public static Dictionary<string, RcsThruster> CreateThrusters3opposite()
+        {
+            return new Dictionary<string, RcsThruster>
+            {
+                ["T1"] = new RcsThruster(new RcsVector(0, 0, 1), new RcsVector(1, 1, 1)),
+                ["T2"] = new RcsThruster(new RcsVector(0, 0, 1), new RcsVector(1, -1, 1)),
+                ["T3"] = new RcsThruster(new RcsVector(0, 0, 1), new RcsVector(0, 1, 1)),
+
+                ["T4"] = new RcsThruster(new RcsVector(0, 0, -1), new RcsVector(1, 1, -1)),
+                ["T5"] = new RcsThruster(new RcsVector(0, 0, -1), new RcsVector(1, -1, -1)),
+                ["T6"] = new RcsThruster(new RcsVector(0, 0, -1), new RcsVector(0, -1, -1)),
+            };
+        }
     }
 }

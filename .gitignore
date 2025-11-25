@@ -1,0 +1,20 @@
+# Build outputs
+**/bin/
+**/obj/
+TestResults/
+
+# IDE/cache
+.vs/
+*.user
+*.suo
+*.cache
+
+# Packages restored by NuGet
+packages/
+
+# Logs/coverage
+*.log
+*.trx
+
+# Generated data
+*.sourcelink.json

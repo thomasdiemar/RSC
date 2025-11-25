@@ -1,8 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using LinearSolver;
-
-//codex resume 019aad7c-0210-76f0-bafb-7c4851ccb64f
 
 namespace RCS
 {
@@ -10,33 +9,42 @@ namespace RCS
     {
         private readonly TSolver solver;
 
+        /// <summary>
+        /// Create an optimiser with a default solver instance.
+        /// </summary>
         public RcsEngineOptimiser() : this(new TSolver())
         {
         }
 
+        /// <summary>
+        /// Create an optimiser with an explicitly provided solver instance.
+        /// </summary>
         public RcsEngineOptimiser(TSolver solver)
         {
             this.solver = solver;
         }
 
-        public RcsEngineResult Optimise(RcsEngine engine, RcsCommand command)
+        /// <summary>
+        /// Stream progress snapshots mapped from solver outputs to resultant force/torque.
+        /// </summary>
+        public IEnumerable<MyProgress<RcsEngineResult>> Optimise(RcsEngine engine, RcsCommand command)
         {
             var orderedThrusters = engine.Thrusters.OrderBy(t => t.Key).ToList();
             double[,] matrix = BuildCoefficientMatrix(orderedThrusters);
             double[] desired = BuildDesiredVector(engine, command);
 
-            double[] outputsArray = solver.Solve(matrix, desired);
-
-            var outputs = new Dictionary<string, double>();
-            for (int i = 0; i < orderedThrusters.Count; i++)
-                outputs[orderedThrusters[i].Key] = outputsArray[i];
-
-            var resultantForce = CalculateResultantForce(engine.Thrusters, outputs);
-            var resultantTorque = CalculateResultantTorque(engine.Thrusters, outputs);
-
-            return new RcsEngineResult(outputs, resultantForce, resultantTorque);
+            foreach (var progress in solver.Solve(matrix, desired))
+            {
+                var outputs = MapOutputs(orderedThrusters, progress.Result);
+                var resultantForce = CalculateResultantForce(engine.Thrusters, outputs);
+                var resultantTorque = CalculateResultantTorque(engine.Thrusters, outputs);
+                yield return CreateProgress(new RcsEngineResult(outputs, resultantForce, resultantTorque));
+            }
         }
 
+        /// <summary>
+        /// Construct desired per-axis targets (max/min or soft zero) based on command and thruster limits.
+        /// </summary>
         public double[] BuildDesiredVector(RcsEngine engine, RcsCommand command)
         {
             double maxFx = 0, minFx = 0, maxFy = 0, minFy = 0, maxFz = 0, minFz = 0;
@@ -71,6 +79,9 @@ namespace RCS
             };
         }
 
+        /// <summary>
+        /// Build the 6xN coefficient matrix (force/torque rows by thruster).
+        /// </summary>
         private static double[,] BuildCoefficientMatrix(IReadOnlyList<KeyValuePair<string, RcsThruster>> thrusters)
         {
             double[,] matrix = new double[6, thrusters.Count];
@@ -92,6 +103,9 @@ namespace RCS
             return matrix;
         }
 
+        /// <summary>
+        /// Select target per axis based on requested sign and soft-zero allowance.
+        /// </summary>
         private static double SelectDesired(double max, double min, double requested, bool allowSoftZero)
         {
             if (requested > 0)
@@ -101,6 +115,22 @@ namespace RCS
             return allowSoftZero ? double.NaN : 0;
         }
 
+        /// <summary>
+        /// Map solver output vector back to thruster name/value pairs.
+        /// </summary>
+        private static Dictionary<string, double> MapOutputs(
+            IReadOnlyList<KeyValuePair<string, RcsThruster>> orderedThrusters,
+            double[] outputsArray)
+        {
+            var outputs = new Dictionary<string, double>();
+            for (int i = 0; i < orderedThrusters.Count; i++)
+                outputs[orderedThrusters[i].Key] = outputsArray[i];
+            return outputs;
+        }
+
+        /// <summary>
+        /// Compute resultant force from thruster outputs.
+        /// </summary>
         private static RcsVector CalculateResultantForce(
             IReadOnlyDictionary<string, RcsThruster> thrusters,
             IReadOnlyDictionary<string, double> outputs)
@@ -120,6 +150,9 @@ namespace RCS
             return new RcsVector(fx, fy, fz);
         }
 
+        /// <summary>
+        /// Compute resultant torque from thruster outputs.
+        /// </summary>
         private static RcsVector CalculateResultantTorque(
             IReadOnlyDictionary<string, RcsThruster> thrusters,
             IReadOnlyDictionary<string, double> outputs)
@@ -139,6 +172,18 @@ namespace RCS
             }
 
             return new RcsVector(tx, ty, tz);
+        }
+
+        /// <summary>
+        /// Wrap a snapshot result into progress metadata.
+        /// </summary>
+        private static LinearSolver.MyProgress<RcsEngineResult> CreateProgress(RcsEngineResult result)
+        {
+            return new LinearSolver.MyProgress<RcsEngineResult>
+            {
+                Result = result,
+                Done = true
+            };
         }
     }
 }

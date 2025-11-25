@@ -1,9 +1,0 @@
-C:\Users\thoma\source\repos\RSC\LinearSolver.Custom\bin\Debug\LinearSolver.Custom.dll
-C:\Users\thoma\source\repos\RSC\LinearSolver.Custom\bin\Debug\LinearSolver.Custom.pdb
-C:\Users\thoma\source\repos\RSC\LinearSolver.Custom\bin\Debug\LinearSolver.dll
-C:\Users\thoma\source\repos\RSC\LinearSolver.Custom\bin\Debug\LinearSolver.pdb
-C:\Users\thoma\source\repos\RSC\LinearSolver.Custom\obj\Debug\LinearSolver.Custom.csproj.AssemblyReference.cache
-C:\Users\thoma\source\repos\RSC\LinearSolver.Custom\obj\Debug\LinearSolver.Custom.csproj.CoreCompileInputs.cache
-C:\Users\thoma\source\repos\RSC\LinearSolver.Custom\obj\Debug\LinearSo.7A554607.Up2Date
-C:\Users\thoma\source\repos\RSC\LinearSolver.Custom\obj\Debug\LinearSolver.Custom.dll
-C:\Users\thoma\source\repos\RSC\LinearSolver.Custom\obj\Debug\LinearSolver.Custom.pdb
