@@ -41,11 +41,29 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Mathematics\Fraction.cs" />
     <Compile Include="GoalProgrammingSolver.cs" />
+    <Compile Include="PreEmptive\BoundedInteger\Diagnostics\SimplexDiagnostics.cs" />
+    <Compile Include="PreEmptive\BoundedInteger\Model\BoundedIntegerVariable.cs" />
+    <Compile Include="PreEmptive\BoundedInteger\Model\GoalDefinition.cs" />
+    <Compile Include="PreEmptive\BoundedInteger\Model\PreEmptiveIntegerTableau.cs" />
+    <Compile Include="PreEmptive\BoundedInteger\Model\SolverBound.cs" />
+    <Compile Include="PreEmptive\BoundedInteger\Model\TableauRowState.cs" />
+    <Compile Include="PreEmptive\BoundedInteger\Simplex\BoundedAugmentedRatioTest.cs" />
+    <Compile Include="PreEmptive\BoundedInteger\Simplex\BoundedIntegerBranchAndBound.cs" />
+    <Compile Include="PreEmptive\BoundedInteger\Simplex\BoundedIntegerSimplex.cs" />
+    <Compile Include="PreEmptive\BoundedInteger\Simplex\IRatioTest.cs" />
+    <Compile Include="PreEmptive\BoundedInteger\Simplex\LexicographicGoalResult.cs" />
+    <Compile Include="PreEmptive\BoundedInteger\Simplex\LexicographicGoalSolver.cs" />
+    <Compile Include="PreEmptive\BoundedInteger\Simplex\PivotType.cs" />
+    <Compile Include="PreEmptive\BoundedInteger\Simplex\Progress.cs" />
+    <Compile Include="PreEmptive\BoundedInteger\Simplex\SimplexResult.cs" />
+    <Compile Include="PreEmptive\BoundedInteger\Simplex\SimplexStatus.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\LinearSolver\LinearSolver.csproj" />
+    <ProjectReference Include="..\LinearSolver.Custom\LinearSolver.Custom.csproj" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
