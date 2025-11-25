@@ -1,7 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using LinearSolver.Custom;
+using LinearSolver.MSF;
 using RCS;
-using RCS.MSF;
 
 namespace ThrusterOptimizationTests
 {
@@ -11,7 +11,7 @@ namespace ThrusterOptimizationTests
         public TestContext TestContext { get; set; } = null!;
 
         private readonly ARcsEngineOptimiser<CustomGoalLinearSolver> customOptimiser = new ARcsEngineOptimiser<CustomGoalLinearSolver>();
-        private readonly MfsRcsEngineOptimiser mfsOptimiser = new MfsRcsEngineOptimiser();
+        private readonly ARcsEngineOptimiser<MsfGoalLinearSolver> msfOptimiser = new ARcsEngineOptimiser<MsfGoalLinearSolver>();
 
         [TestMethod] public void MaxFx_MatchesMsf() => AssertOptimisersMatch(new RcsVector(1, 0, 0), new RcsVector());
         [TestMethod] public void MinFx_MatchesMsf() => AssertOptimisersMatch(new RcsVector(-1, 0, 0), new RcsVector());
@@ -61,7 +61,7 @@ namespace ThrusterOptimizationTests
             var command = new RcsCommand(desiredForce, desiredTorque, allowNonCommandedForces: true);
 
             var customResult = customOptimiser.Optimise(engine, command);
-            var msfResult = mfsOptimiser.Optimise(engine, command);
+            var msfResult = msfOptimiser.Optimise(engine, command);
 
             LogResult("Custom Optimiser", customResult);
             LogResult("MSF Optimiser", msfResult);
@@ -81,7 +81,7 @@ namespace ThrusterOptimizationTests
             var command = new RcsCommand(desiredForce, desiredTorque);
 
             var customResult = customOptimiser.Optimise(engine, command);
-            var msfResult = mfsOptimiser.Optimise(engine, command);
+            var msfResult = msfOptimiser.Optimise(engine, command);
 
             LogResult("Custom Optimiser (3Fx)", customResult);
             LogResult("MSF Optimiser (3Fx)", msfResult);
@@ -104,10 +104,10 @@ namespace ThrusterOptimizationTests
         private void AssertOptimisersMatch4Fx(RcsVector desiredForce, RcsVector desiredTorque)
         {
             var engine = new RcsEngine(ThrusterTestData.CreateThrusters4Fx());
-            var command = new RcsCommand(desiredForce, desiredTorque);
+            var command = new RcsCommand(desiredForce, desiredTorque, true);
 
             var customResult = customOptimiser.Optimise(engine, command);
-            var msfResult = mfsOptimiser.Optimise(engine, command);
+            var msfResult = msfOptimiser.Optimise(engine, command);
 
             LogResult("Custom Optimiser (4Fx)", customResult);
             LogResult("MSF Optimiser (4Fx)", msfResult);
