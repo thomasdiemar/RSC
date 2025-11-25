@@ -14,8 +14,6 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
     {
         private readonly BoundedIntegerSimplex simplex;
         private readonly BoundedIntegerBranchAndBound branchAndBound;
-        private const double EqualityTolerance = 1e-12;
-        private const double SoftZeroTolerance = 1e-8;
 
         public LexicographicGoalSolver()
             : this(new BoundedIntegerSimplex())
@@ -58,15 +56,144 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
         /// </summary>
         public virtual IEnumerable<MyProgress<double[]>> Solve(double[,] coefficients, double[] constants)
         {
-            var best = SolveExhaustively(coefficients, constants);
-            yield return new MyProgress<double[]>
+            if (coefficients == null) throw new ArgumentNullException(nameof(coefficients));
+            if (constants == null) throw new ArgumentNullException(nameof(constants));
+
+            int rows = coefficients.GetLength(0);
+            int cols = coefficients.GetLength(1);
+            if (constants.Length != rows)
             {
-                Result = best,
-                Done = true
-            };
+                throw new ArgumentException("Constants vector length must match coefficient rows.", nameof(constants));
+            }
+
+            // Exhaustive bounded search for small systems to find a feasible/optimal thrust pattern.
+            if (cols <= 12)
+            {
+                var best = ExhaustiveSearch(coefficients, constants);
+                yield return new MyProgress<double[]>
+                {
+                    Result = best,
+                    Done = true
+                };
+                yield break;
+            }
+
+            var tableau = BuildTableau(coefficients, constants);
+            int columnCount = tableau.ColumnCount;
+
+            foreach (var snapshot in SolveTableauProgressively(tableau))
+            {
+                var output = new double[columnCount];
+                var stageSolution = snapshot.Result?.StageResults?.LastOrDefault()?.Solution;
+                if (stageSolution != null)
+                {
+                    for (int i = 0; i < Math.Min(columnCount, stageSolution.Count); i++)
+                    {
+                        output[i] = stageSolution[i].Value;
+                    }
+                }
+
+                yield return new MyProgress<double[]>
+                {
+                    Result = output,
+                    Done = snapshot.Done
+                };
+            }
         }
 
-        private double[] SolveExhaustively(double[,] coefficients, double[] constants)
+        private double[] ExhaustiveSearch(double[,] coefficients, double[] constants)
+        {
+            int rows = coefficients.GetLength(0);
+            int cols = coefficients.GetLength(1);
+            double[] levels = new[] { 0.0, 0.5, 1.0 };
+
+            // Identify first commanded row as primary target.
+            int targetRow = -1;
+            double targetSign = 0;
+            for (int r = 0; r < rows; r++)
+            {
+                if (double.IsNaN(constants[r]) || Math.Abs(constants[r]) < 1e-9)
+                {
+                    continue;
+                }
+
+                targetRow = r;
+                targetSign = constants[r] > 0 ? 1 : -1;
+                break;
+            }
+
+            double bestScore = double.NegativeInfinity;
+            double[] best = new double[cols];
+            const double hardPenaltyWeight = 1000.0;
+            const double softPenaltyWeight = 0.05;
+            var current = new double[cols];
+
+            void Evaluate()
+            {
+                double[] rowValues = new double[rows];
+                for (int r = 0; r < rows; r++)
+                {
+                    double sum = 0;
+                    for (int c = 0; c < cols; c++)
+                    {
+                        sum += coefficients[r, c] * current[c];
+                    }
+                    rowValues[r] = sum;
+                }
+
+                double targetValue = targetRow >= 0 ? rowValues[targetRow] * targetSign : 0;
+                double penalty = 0;
+                for (int r = 0; r < rows; r++)
+                {
+                    if (r == targetRow) continue;
+
+                    double weight;
+                    if (double.IsNaN(constants[r]))
+                    {
+                        // Soft rows should bias toward low spillover but never block feasible torque/force generation.
+                        weight = softPenaltyWeight;
+                    }
+                    else if (Math.Abs(constants[r]) < 1e-9)
+                    {
+                        // Hard zero rows (no non-commanded output allowed) must stay near zero.
+                        weight = hardPenaltyWeight;
+                    }
+                    else
+                    {
+                        weight = hardPenaltyWeight;
+                    }
+
+                    penalty += weight * Math.Abs(rowValues[r]);
+                }
+
+                double score = targetValue - penalty;
+                if (score > bestScore + 1e-9)
+                {
+                    bestScore = score;
+                    Array.Copy(current, best, cols);
+                }
+            }
+
+            void Search(int idx)
+            {
+                if (idx == cols)
+                {
+                    Evaluate();
+                    return;
+                }
+
+                foreach (var level in levels)
+                {
+                    current[idx] = level;
+                    Search(idx + 1);
+                }
+            }
+
+            Search(0);
+            return best;
+        }
+
+        private PreEmptiveIntegerTableau BuildTableau(double[,] coefficients, double[] constants)
         {
             if (coefficients == null)
             {
@@ -79,140 +206,72 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             }
 
             int rows = coefficients.GetLength(0);
-            int cols = coefficients.GetLength(1);
+            int columns = coefficients.GetLength(1);
             if (constants.Length != rows)
             {
                 throw new ArgumentException("Constants vector length must match coefficient rows.", nameof(constants));
             }
 
-            const int granularity = 4; // 0,0.25,0.5,0.75,1 to allow finer adjustments than the original {0,0.5,1}
-            double[] levels = Enumerable.Range(0, granularity + 1)
-                .Select(i => i / (double)granularity)
-                .ToArray();
-            double[] best = null;
-            double[] bestScores = null;
-            int[] priorityOrder = BuildPriorityOrder(constants);
-
-            var current = new double[cols];
-            Explore(0);
-            return best ?? new double[cols];
-
-            void Explore(int index)
+            var variables = new List<BoundedIntegerVariable>();
+            for (int c = 0; c < columns; c++)
             {
-                if (index == cols)
-                {
-                    EvaluateCandidate();
-                    return;
-                }
-
-                for (int i = 0; i < levels.Length; i++)
-                {
-                    current[index] = levels[i];
-                    Explore(index + 1);
-                }
+                variables.Add(new BoundedIntegerVariable($"x{c}", new Fraction(0), new Fraction(1), isInteger: false));
             }
 
-            void EvaluateCandidate()
+            var goals = new List<GoalDefinition>();
+            var states = new List<TableauRowState>();
+
+            for (int r = 0; r < rows; r++)
             {
-                double[] rowValues = new double[rows];
-                for (int r = 0; r < rows; r++)
+                var coeffVector = new List<KeyValuePair<string, Fraction>>();
+                for (int c = 0; c < columns; c++)
                 {
-                    double sum = 0;
-                    for (int c = 0; c < cols; c++)
-                    {
-                        sum += coefficients[r, c] * current[c];
-                    }
-
-                    rowValues[r] = sum;
+                    coeffVector.Add(new KeyValuePair<string, Fraction>($"x{c}", ToFraction(coefficients[r, c])));
                 }
 
-                for (int r = 0; r < rows; r++)
-                {
-                    if (double.IsNaN(constants[r]))
-                    {
-                        continue;
-                    }
+                bool isSoft = double.IsNaN(constants[r]);
+                var rhs = isSoft ? new Fraction(0) : ToFraction(constants[r]);
+                var sense = isSoft
+                    ? GoalSense.Equal
+                    : rhs > new Fraction(0)
+                        ? GoalSense.Maximize
+                        : rhs < new Fraction(0)
+                            ? GoalSense.Minimize
+                            : GoalSense.Equal;
+                var tolerance = isSoft ? Fraction.MaxValue : new Fraction(0);
 
-                    if (Math.Abs(constants[r]) < SoftZeroTolerance && Math.Abs(rowValues[r]) > 1e-6)
-                    {
-                        return;
-                    }
-                }
-
-                double[] scores = new double[rows];
-                for (int r = 0; r < rows; r++)
-                {
-                    double desired = constants[r];
-                    if (double.IsNaN(desired))
-                    {
-                        scores[r] = -Math.Abs(rowValues[r]);
-                    }
-                    else if (desired > 0)
-                    {
-                        scores[r] = rowValues[r];
-                    }
-                    else if (desired < 0)
-                    {
-                        scores[r] = -rowValues[r];
-                    }
-                    else
-                    {
-                        scores[r] = -Math.Abs(rowValues[r]);
-                    }
-                }
-
-                if (best == null || LexicographicallyBetter(scores, bestScores))
-                {
-                    best = (double[])current.Clone();
-                    bestScores = scores;
-                }
+                goals.Add(new GoalDefinition($"g{r}", sense, priority: 0, coefficientVector: coeffVector, rightHandSide: rhs, tolerance: tolerance));
+                states.Add(new TableauRowState($"g{r}", priority: 0, value: rhs, bound: new SolverBound(Fraction.MinValue, Fraction.MaxValue)));
             }
 
-            bool LexicographicallyBetter(double[] candidate, double[] incumbent)
+            var tableau = new PreEmptiveIntegerTableau(variables, goals, states);
+            for (int r = 0; r < rows; r++)
             {
-                for (int pi = 0; pi < priorityOrder.Length; pi++)
+                for (int c = 0; c < columns; c++)
                 {
-                    int idx = priorityOrder[pi];
-                    if (Math.Abs(candidate[idx] - incumbent[idx]) < 1e-9)
-                    {
-                        continue;
-                    }
-
-                    return candidate[idx] > incumbent[idx];
+                    tableau.SetCoefficient(r, c, ToFraction(coefficients[r, c]));
                 }
 
-                return false;
+                tableau.SetRightHandSide(r, ToFraction(constants[r]));
             }
+
+            return tableau;
         }
 
-        private static int[] BuildPriorityOrder(double[] constants)
+        private static Fraction ToFraction(double value)
         {
-            var primary = new List<int>();
-            var equalities = new List<int>();
-            var softZeros = new List<int>();
-
-            for (int i = 0; i < constants.Length; i++)
+            const int scale = 1000000;
+            if (double.IsNaN(value))
             {
-                if (double.IsNaN(constants[i]))
-                {
-                    softZeros.Add(i);
-                }
-                else if (Math.Abs(constants[i]) < SoftZeroTolerance)
-                {
-                    equalities.Add(i);
-                }
-                else
-                {
-                    primary.Add(i);
-                }
+                return new Fraction(0);
             }
 
-            var order = new int[constants.Length];
-            int idx = 0;
-            foreach (var i in primary) order[idx++] = i;
-            foreach (var i in equalities) order[idx++] = i;
-            foreach (var i in softZeros) order[idx++] = i;
-            return order;
+            if (double.IsInfinity(value))
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), "Coefficients and constants must be finite.");
+            }
+
+            return new Fraction((int)Math.Round(value * scale), scale);
         }
 
         public virtual IEnumerable<Progress> SolveTableauProgressively(PreEmptiveIntegerTableau tableau)

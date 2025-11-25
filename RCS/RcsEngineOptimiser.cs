@@ -112,8 +112,7 @@ namespace RCS
                 return max;
             if (requested < 0)
                 return min;
-            // Treat non-commanded axes as zero target to keep tableaux finite for custom solvers.
-            return 0;
+            return allowSoftZero ? double.NaN : 0;
         }
 
         /// <summary>

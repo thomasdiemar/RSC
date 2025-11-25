@@ -58,7 +58,6 @@ namespace ThrusterOptimizationTests
                 ["T6"] = new RcsThruster(new RcsVector(0, 0, -1), new RcsVector(0, -1, -1)),
             };
         }
-
         public static Dictionary<string, RcsThruster> CreateThrustersRandom2Fx()
         {
             // Reuse a balanced 12-thruster layout to exercise solver parity under a distinct dataset name.
@@ -78,6 +77,19 @@ namespace ThrusterOptimizationTests
                 ["R10"] = new RcsThruster(new RcsVector(0, 0, 1), new RcsVector(-0.6, 0.6, 0.9)),
                 ["R11"] = new RcsThruster(new RcsVector(0, 0, -1), new RcsVector(0.4, 0.5, -1.1)),
                 ["R12"] = new RcsThruster(new RcsVector(0, 0, -1), new RcsVector(-0.5, -0.4, -0.8)),
+            };
+        }
+        public static Dictionary<string, RcsThruster> CreateThrustersRandomFx()
+        {
+            var rand = new Random();
+            var a = rand.Next(100);
+            var b = rand.Next(100);
+            var c = rand.Next(100);
+            var d = rand.Next(100);
+            return new Dictionary<string, RcsThruster>
+            {
+                ["T1"] = new RcsThruster(new RcsVector(0, 0, 1), new RcsVector(a, b, 1)),
+                ["T2"] = new RcsThruster(new RcsVector(0, 0, 1), new RcsVector(-1*c, d, 1))
             };
         }
     }

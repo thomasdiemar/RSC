@@ -17,7 +17,7 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 throw new ArgumentNullException(nameof(tableau));
             }
 
-            var eps = Fraction.Epsilon;
+            var eps = new Fraction(1, 1000000);
             int entering = tableau.EnteringColumnIndex;
             if (entering < 0 || entering >= tableau.ColumnCount || entering == tableau.RightHandSideColumnIndex)
             {

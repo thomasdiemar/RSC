@@ -48,6 +48,12 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             var diagnostics = new SimplexDiagnostics(priorityLevel);
             ValidateVariables(tableau);
 
+            // Initialize basic variables at their lower bounds.
+            for (int i = 0; i < tableau.ColumnCount; i++)
+            {
+                tableau.ColumnHeaders[i].SetValue(tableau.ColumnHeaders[i].LowerBound);
+            }
+
             var iterations = 0;
             while (iterations < MaxIterations)
             {
