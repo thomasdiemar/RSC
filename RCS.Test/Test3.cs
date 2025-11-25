@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using RCS;
+using LinearSolver.Custom;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -16,7 +17,7 @@ namespace ThrusterOptimizationTests
             var thrusters = ThrusterTestData.CreateThrusters();
 
             var engine = new RcsEngine(thrusters);
-            var optimiser = new RcsEngineOptimiser();
+            var optimiser = new RcsEngineOptimiser<CustomGoalLinearSolver>();
 
             var command = new RcsCommand(new RcsVector(1, 0, 0), new RcsVector());
             var result = optimiser.Optimise(engine, command);
@@ -34,7 +35,7 @@ namespace ThrusterOptimizationTests
             var thrusters = ThrusterTestData.CreateThrusters();
 
             var engine = new RcsEngine(thrusters);
-            var optimiser = new RcsEngineOptimiser();
+            var optimiser = new RcsEngineOptimiser<CustomGoalLinearSolver>();
 
             var command = new RcsCommand(new RcsVector(-1, 0, 0), new RcsVector());
             var result = optimiser.Optimise(engine, command);
@@ -52,7 +53,7 @@ namespace ThrusterOptimizationTests
             var thrusters = ThrusterTestData.CreateThrusters();
 
             var engine = new RcsEngine(thrusters);
-            var optimiser = new RcsEngineOptimiser();
+            var optimiser = new RcsEngineOptimiser<CustomGoalLinearSolver>();
 
             var command = new RcsCommand(new RcsVector(0, 1, 0), new RcsVector());
             var result = optimiser.Optimise(engine, command);
@@ -70,7 +71,7 @@ namespace ThrusterOptimizationTests
             var thrusters = ThrusterTestData.CreateThrusters();
 
             var engine = new RcsEngine(thrusters);
-            var optimiser = new RcsEngineOptimiser();
+            var optimiser = new RcsEngineOptimiser<CustomGoalLinearSolver>();
 
             var command = new RcsCommand(new RcsVector(0, -1, 0), new RcsVector());
             var result = optimiser.Optimise(engine, command);
@@ -88,7 +89,7 @@ namespace ThrusterOptimizationTests
             var thrusters = ThrusterTestData.CreateThrusters();
 
             var engine = new RcsEngine(thrusters);
-            var optimiser = new RcsEngineOptimiser();
+            var optimiser = new RcsEngineOptimiser<CustomGoalLinearSolver>();
 
             var command = new RcsCommand(new RcsVector(0, 0, 1), new RcsVector());
             var result = optimiser.Optimise(engine, command);
@@ -106,7 +107,7 @@ namespace ThrusterOptimizationTests
             var thrusters = ThrusterTestData.CreateThrusters();
 
             var engine = new RcsEngine(thrusters);
-            var optimiser = new RcsEngineOptimiser();
+            var optimiser = new RcsEngineOptimiser<CustomGoalLinearSolver>();
 
             var command = new RcsCommand(new RcsVector(0, 0, -1), new RcsVector());
             var result = optimiser.Optimise(engine, command);
@@ -124,7 +125,7 @@ namespace ThrusterOptimizationTests
             var thrusters = ThrusterTestData.CreateThrusters();
 
             var engine = new RcsEngine(thrusters);
-            var optimiser = new RcsEngineOptimiser();
+            var optimiser = new RcsEngineOptimiser<CustomGoalLinearSolver>();
 
             var command = new RcsCommand(new RcsVector(), new RcsVector(1, 0, 0));
             var result = optimiser.Optimise(engine, command);
@@ -140,7 +141,7 @@ namespace ThrusterOptimizationTests
             var thrusters = ThrusterTestData.CreateThrusters();
 
             var engine = new RcsEngine(thrusters);
-            var optimiser = new RcsEngineOptimiser();
+            var optimiser = new RcsEngineOptimiser<CustomGoalLinearSolver>();
 
             var command = new RcsCommand(new RcsVector(), new RcsVector(-1, 0, 0));
             var result = optimiser.Optimise(engine, command);
@@ -156,7 +157,7 @@ namespace ThrusterOptimizationTests
             var thrusters = ThrusterTestData.CreateThrusters();
 
             var engine = new RcsEngine(thrusters);
-            var optimiser = new RcsEngineOptimiser();
+            var optimiser = new RcsEngineOptimiser<CustomGoalLinearSolver>();
 
             var command = new RcsCommand(new RcsVector(), new RcsVector(0, 1, 0));
             var result = optimiser.Optimise(engine, command);
@@ -172,7 +173,7 @@ namespace ThrusterOptimizationTests
             var thrusters = ThrusterTestData.CreateThrusters();
 
             var engine = new RcsEngine(thrusters);
-            var optimiser = new RcsEngineOptimiser();
+            var optimiser = new RcsEngineOptimiser<CustomGoalLinearSolver>();
 
             var command = new RcsCommand(new RcsVector(), new RcsVector(0, -1, 0));
             var result = optimiser.Optimise(engine, command);
@@ -188,7 +189,7 @@ namespace ThrusterOptimizationTests
             var thrusters = ThrusterTestData.CreateThrusters();
 
             var engine = new RcsEngine(thrusters);
-            var optimiser = new RcsEngineOptimiser();
+            var optimiser = new RcsEngineOptimiser<CustomGoalLinearSolver>();
 
             var command = new RcsCommand(new RcsVector(), new RcsVector(0, 0, 1));
             var result = optimiser.Optimise(engine, command);
@@ -204,7 +205,7 @@ namespace ThrusterOptimizationTests
             var thrusters = ThrusterTestData.CreateThrusters();
 
             var engine = new RcsEngine(thrusters);
-            var optimiser = new RcsEngineOptimiser();
+            var optimiser = new RcsEngineOptimiser<CustomGoalLinearSolver>();
 
             var command = new RcsCommand(new RcsVector(), new RcsVector(0, 0, -1));
             var result = optimiser.Optimise(engine, command);

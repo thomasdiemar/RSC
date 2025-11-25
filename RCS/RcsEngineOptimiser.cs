@@ -1,24 +1,35 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using LinearSolver.Custom;
+using LinearSolver;
+
+//codex resume 019aad7c-0210-76f0-bafb-7c4851ccb64f
 
 namespace RCS
 {
-    public class RcsEngineOptimiser : IRcsEngineOptimiser
+    public class RcsEngineOptimiser<TSolver> : IRcsEngineOptimiser where TSolver : IMyLinearSolver, new()
     {
+        private readonly TSolver solver;
+
+        public RcsEngineOptimiser() : this(new TSolver())
+        {
+        }
+
+        public RcsEngineOptimiser(TSolver solver)
+        {
+            this.solver = solver;
+        }
+
         public RcsEngineResult Optimise(RcsEngine engine, RcsCommand command)
         {
-            var thrusters = engine.Thrusters.OrderBy(t => t.Key).ToList();
-            double[,] matrix = BuildCoefficientMatrix(thrusters);
+            var orderedThrusters = engine.Thrusters.OrderBy(t => t.Key).ToList();
+            double[,] matrix = BuildCoefficientMatrix(orderedThrusters);
             double[] desired = BuildDesiredVector(engine, command);
 
-            var solver = new CustomLinearSolver();
             double[] outputsArray = solver.Solve(matrix, desired);
 
             var outputs = new Dictionary<string, double>();
-            for (int i = 0; i < thrusters.Count; i++)
-                outputs[thrusters[i].Key] = outputsArray[i];
+            for (int i = 0; i < orderedThrusters.Count; i++)
+                outputs[orderedThrusters[i].Key] = outputsArray[i];
 
             var resultantForce = CalculateResultantForce(engine.Thrusters, outputs);
             var resultantTorque = CalculateResultantTorque(engine.Thrusters, outputs);
@@ -51,12 +62,12 @@ namespace RCS
 
             return new[]
             {
-                SelectDesired(maxFx, minFx, command.DesiredForce.X),
-                SelectDesired(maxFy, minFy, command.DesiredForce.Y),
-                SelectDesired(maxFz, minFz, command.DesiredForce.Z),
-                SelectDesired(maxTx, minTx, command.DesiredTorque.X),
-                SelectDesired(maxTy, minTy, command.DesiredTorque.Y),
-                SelectDesired(maxTz, minTz, command.DesiredTorque.Z)
+                SelectDesired(maxFx, minFx, command.DesiredForce.X, command.AllowNonCommandedForces),
+                SelectDesired(maxFy, minFy, command.DesiredForce.Y, command.AllowNonCommandedForces),
+                SelectDesired(maxFz, minFz, command.DesiredForce.Z, command.AllowNonCommandedForces),
+                SelectDesired(maxTx, minTx, command.DesiredTorque.X, command.AllowNonCommandedTorques),
+                SelectDesired(maxTy, minTy, command.DesiredTorque.Y, command.AllowNonCommandedTorques),
+                SelectDesired(maxTz, minTz, command.DesiredTorque.Z, command.AllowNonCommandedTorques)
             };
         }
 
@@ -81,13 +92,13 @@ namespace RCS
             return matrix;
         }
 
-        private static double SelectDesired(double max, double min, double requested)
+        private static double SelectDesired(double max, double min, double requested, bool allowSoftZero)
         {
             if (requested > 0)
                 return max;
             if (requested < 0)
                 return min;
-            return 0;
+            return allowSoftZero ? double.NaN : 0;
         }
 
         private static RcsVector CalculateResultantForce(

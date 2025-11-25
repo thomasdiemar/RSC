@@ -10,8 +10,8 @@ namespace ThrusterOptimizationTests
     {
         public TestContext TestContext { get; set; } = null!;
 
-        private readonly ARcsEngineOptimiser<CustomGoalLinearSolver> customOptimiser = new ARcsEngineOptimiser<CustomGoalLinearSolver>();
-        private readonly ARcsEngineOptimiser<MsfGoalLinearSolver> msfOptimiser = new ARcsEngineOptimiser<MsfGoalLinearSolver>();
+        private readonly RcsEngineOptimiser<CustomGoalLinearSolver> customOptimiser = new RcsEngineOptimiser<CustomGoalLinearSolver>();
+        private readonly RcsEngineOptimiser<MsfGoalLinearSolver> msfOptimiser = new RcsEngineOptimiser<MsfGoalLinearSolver>();
 
         [TestMethod] public void MaxFx_MatchesMsf() => AssertOptimisersMatch(new RcsVector(1, 0, 0), new RcsVector());
         [TestMethod] public void MinFx_MatchesMsf() => AssertOptimisersMatch(new RcsVector(-1, 0, 0), new RcsVector());
