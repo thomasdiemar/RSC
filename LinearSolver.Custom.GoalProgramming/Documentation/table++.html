@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Preemptive Bounded Simplex (Minimization) — Priority 1 & 2 with Objective / Net Row & ART</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root{
+    --ink:#1f2328; --muted:#59636e; --bg:#f7f9fb; --line:#dce1e7;
+    --enter:#e6f0ff; --enter-b:#7aa2ff;          /* blue: entering choice */
+    --art:#fff3b0; --art-b:#e0cc7a;              /* yellow: ART */
+    --obj:#e8f7e8; --obj-b:#95d595;              /* green: objective / net eval row */
+    --cons:#ffe6ea; --cons-b:#ff9db0;            /* red: constraints & influence */
+    --lock:#eef2ff; --lock-b:#c7d2fe;            /* locked rows */
+  }
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  main{max-width:1220px;margin:28px auto;padding:0 18px}
+  h1{font-size:1.9rem;margin:.2rem 0 1rem}
+  h2{margin:1.2rem 0 .6rem}
+  h3{margin:1rem 0 .5rem}
+  p.lead{color:var(--muted)}
+  .card{background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 1px 0 rgba(0,0,0,.03);margin:.7rem 0}
+  .hd{padding:10px 12px;border-bottom:1px solid var(--line);font-weight:600}
+  .bd{padding:12px}
+  table{width:100%;border-collapse:collapse;margin:.6rem 0}
+  th,td{border:1px solid var(--line);padding:6px 8px;text-align:right}
+  th:first-child,td:first-child{text-align:left}
+  .status{text-align:center;white-space:nowrap}
+  .zrow td,.zrow th{background:var(--obj);font-weight:700;border-color:var(--obj-b)}
+  .enterBox{background:var(--enter);border:1px solid var(--enter-b);border-radius:8px;padding:10px;margin:.5rem 0}
+  .artBox{background:var(--art);border:1px solid var(--art-b);border-radius:8px;padding:10px;margin:.5rem 0}
+  .objBox{background:var(--obj);border:1px solid var(--obj-b);border-radius:8px;padding:10px;margin:.5rem 0}
+  .consBox{background:var(--cons);border:1px solid var(--cons-b);border-radius:8px;padding:10px;margin:.5rem 0}
+  .lockRow{background:var(--lock);border-color:var(--lock-b)}
+  .pivotcell{background:#ffe9cc;border:2px solid #f0b76b;font-weight:700}
+  code,.math{background:#f6f8fa;border:1px solid var(--line);padding:0 .25rem;border-radius:4px}
+  .tiny{font-size:.92rem;color:var(--muted)}
+  .lb{color:#0b6;font-weight:600}
+  .ub{color:#b50;font-weight:600}
+  .b {color:#222;font-weight:700}
+</style>
+</head>
+<body>
+<main>
+
+<h1>Preemptive Bounded Simplex — Objective & Net-Evaluation Row at Each Step (Minimization)</h1>
+<p class="lead">
+We solve in two priorities. <b>Priority&nbsp;1</b>: cancel torque using only torque rows as basics (no forces, no artificials).  
+<b>Priority&nbsp;2</b>: lock discovered torque equalities, include force rows, and set a force bound <b>Fx=50</b>.
+We highlight <span style="background:var(--enter)">entering (blue)</span>,
+<span style="background:var(--art)">ART (yellow)</span>,
+<span style="background:var(--obj)">objective/net row (green)</span>,
+and <span style="background:var(--cons)">constraints & influence (red)</span>.  
+All variable statuses LB/UB/B are shown at each step.
+</p>
+
+<div class="card">
+  <div class="hd">Thrusters → Torque map (from geometry)</div>
+  <div class="bd">
+    Given r₁=(2,2,0), r₂=(−2,−2,0), r₃=(0,2,2), r₄=(0,−2,−2) and aᵢ=(100,100,100).  
+    Cross-products give the torque matrix (columns are t₁..t₄):
+    <div class="tiny"><code>
+    B = [
+      [ 200, -200,   0,   0],   /* Tx = 200(t₁−t₂)                     */
+      [-200,  200, 200, -200],  /* Ty = −200(t₁−t₂)+200(t₃−t₄)         */
+      [   0,    0,-200,  200]   /* Tz = −200 t₃ + 200 t₄               */
+    ]
+    </code></div>
+    Objective (min): <span class="math">z = −(t₁+t₂+t₃+t₄)</span>.  
+    Bounds for P1: <span class="math">0 ≤ tᵢ ≤ 1</span>.
+  </div>
+</div>
+
+<hr/>
+
+<!-- ============================ PRIORITY 1 ============================ -->
+<h2>Priority 1 — Cancel torque (Basics: <b>Tx, Ty, Tz</b> only)</h2>
+
+<div class="consBox">
+  In-tableau equalities (kept as basics):  
+  R₁: <span class="math">Tx − 200 t₁ + 200 t₂ = 0</span> ·
+  R₂: <span class="math">Ty + 200 t₁ − 200 t₂ − 200 t₃ + 200 t₄ = 0</span> ·
+  R₃: <span class="math">Tz + 200 t₃ − 200 t₄ = 0</span>.
+</div>
+
+<h3>P1–Step 0 — Initial tableau</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Basic</th><th>RHS</th>
+      <th>t₁</th><th>t₂</th><th>t₃</th><th>t₄</th>
+      <th>Tx</th><th>Ty</th><th>Tz</th>
+      <th class="status">Status (LB/UB/B)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="lockRow"><td><b>Tx</b></td><td>0</td><td>−200</td><td>+200</td><td>0</td><td>0</td><td>+1</td><td>0</td><td>0</td><td class="status">Tx:<span class="b">B</span>; tᵢ:<span class="lb">LB</span></td></tr>
+    <tr class="lockRow"><td><b>Ty</b></td><td>0</td><td>+200</td><td>−200</td><td>−200</td><td>+200</td><td>0</td><td>+1</td><td>0</td><td class="status">Ty:<span class="b">B</span></td></tr>
+    <tr class="lockRow"><td><b>Tz</b></td><td>0</td><td>0</td><td>0</td><td>+200</td><td>−200</td><td>0</td><td>0</td><td>+1</td><td class="status">Tz:<span class="b">B</span></td></tr>
+    <tr class="zrow">
+      <td><b>z (min)</b></td><td><b>0</b></td>
+      <td><b>−1</b></td><td><b>−1</b></td><td><b>−1</b></td><td><b>−1</b></td>
+      <td>0</td><td>0</td><td>0</td>
+      <td class="status">All tᵢ at <span class="lb">LB</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="enterBox"><b>Choose entering (blue):</b> All LB nonbasics have r=−1. Bland ⇒ pick <b>t₁</b> to enter.</div>
+<div class="artBox">
+  <b>ART (yellow) for t₁↑:</b> d = B⁻¹a_{t₁} = [−1/200, +1/200, 0].  
+  Row limits (Tx,Ty,Tz fixed at 0) ⇒ θ=0. Opposite-bound(t₁)=1.  
+  ⇒ <b>Row wins at θ=0 ⇒ degenerate row pivot</b> (Tx leaves, t₁ enters).
+</div>
+<div class="objBox"><b>Objective (green):</b> r(t₁)=−1, θ=0 ⇒ Δz = 0. After pivot r(t₁)→0.</div>
+
+<h3>P1–Step 1 — After degenerate pivot (t₁ basic) — with correct Ty,Tx = +1</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Basic</th><th>RHS</th>
+      <th>t₁</th><th>t₂</th><th>t₃</th><th>t₄</th>
+      <th>Tx</th><th>Ty</th><th>Tz</th>
+      <th class="status">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>t₁</b></td><td>0</td>
+      <td>+1</td><td>−1</td><td>0</td><td>0</td>
+      <td>−1/200</td><td>0</td><td>0</td>
+      <td class="status">t₁:<span class="b">B</span>; t₂,t₃,t₄:<span class="lb">LB</span></td>
+    </tr>
+    <tr class="lockRow">
+      <td><b>Ty</b></td><td>0</td>
+      <td>0</td><td>0</td><td>−200</td><td>+200</td>
+      <td><b>+1</b></td><td>+1</td><td>0</td>
+      <td class="status">Ty:<span class="b">B</span></td>
+    </tr>
+    <tr class="lockRow">
+      <td><b>Tz</b></td><td>0</td>
+      <td>0</td><td>0</td><td>+200</td><td>−200</td>
+      <td>0</td><td>0</td><td>+1</td>
+      <td class="status">Tz:<span class="b">B</span></td>
+    </tr>
+    <tr class="zrow"><td><b>z</b></td><td><b>0</b></td><td><b>0</b></td><td><b>−1</b></td><td><b>−1</b></td><td><b>−1</b></td><td>0</td><td>0</td><td>0</td><td>—</td></tr>
+  </tbody>
+</table>
+
+<div class="enterBox">Eligible: t₂,t₃,t₄ (r=−1). Choose <b>t₃</b> to enter.</div>
+<div class="artBox"><b>ART for t₃↑:</b> Row limits (Ty,Tz locked at 0) ⇒ θ=0. ⇒ <b>Degenerate row pivot</b> (Tz leaves, t₃ enters).</div>
+<div class="objBox">r(t₃)=−1, θ=0 ⇒ Δz=0. r(t₃)→0.</div>
+
+<h3>P1–Step 2 — After degenerate pivot (t₃ basic)</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Basic</th><th>RHS</th>
+      <th>t₁</th><th>t₂</th><th>t₃</th><th>t₄</th>
+      <th>Tx</th><th>Ty</th><th>Tz</th>
+      <th class="status">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>t₁</td><td>0</td><td>+1</td><td>−1</td><td>0</td><td>0</td><td>−1/200</td><td>0</td><td>0</td><td class="status">t₁:<span class="b">B</span></td></tr>
+    <tr class="lockRow"><td><b>Ty</b></td><td>0</td><td>0</td><td>0</td><td>0</td><td>+200</td><td>+1</td><td>+1</td><td>−1</td><td class="status">Ty:<span class="b">B</span></td></tr>
+    <tr><td><b>t₃</b></td><td>0</td><td>0</td><td>0</td><td>+1</td><td>−1</td><td>0</td><td>0</td><td>−1/200</td><td class="status">t₃:<span class="b">B</span></td></tr>
+    <tr class="zrow"><td><b>z</b></td><td><b>0</b></td><td><b>0</b></td><td><b>−1</b></td><td><b>0</b></td><td><b>−1</b></td><td>0</td><td>0</td><td>0</td><td>—</td></tr>
+  </tbody>
+</table>
+
+<div class="enterBox">Eligible: t₂,t₄. Enter <b>t₂</b> from LB.</div>
+<div class="artBox">
+  <b>ART for t₂↑:</b> Row t₁ implies t₁ increases with θ. Row limit (t₁→UB)=1; Opposite-bound(t₂)=1 ⇒ tie ⇒ <b>row pivot</b>, θ=1.
+</div>
+<div class="objBox"><b>Objective:</b> r(t₂)=−1, θ=1 ⇒ Δz=−1 ⇒ z: 0 → <b>−1</b>.</div>
+
+<h3>P1–Step 3 — After nondegenerate pivot (t₂ basic; t₁→UB)</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Basic</th><th>RHS</th>
+      <th>t₁</th><th>t₂</th><th>t₃</th><th>t₄</th>
+      <th>Tx</th><th>Ty</th><th>Tz</th>
+      <th class="status">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><b>t₂</b></td><td>1</td><td>−1</td><td>+1</td><td>0</td><td>0</td><td>0</td><td>+1</td><td>0</td>
+      <td class="status">t₂:<span class="b">B</span>; t₁:<span class="ub">UB</span></td></tr>
+    <tr class="lockRow"><td><b>Ty</b></td><td>0</td><td>0</td><td>0</td><td>0</td><td>+200</td><td>0</td><td>+1</td><td>−1</td><td class="status">Ty:<span class="b">B</span></td></tr>
+    <tr><td>t₃</td><td>0</td><td>0</td><td>0</td><td>+1</td><td>−1</td><td>0</td><td>0</td><td>−1/200</td><td class="status">t₃:<span class="b">B</span></td></tr>
+    <tr class="zrow"><td><b>z</b></td><td><b>−1</b></td><td><b>0</b></td><td><b>0</b></td><td><b>0</b></td><td><b>−1</b></td><td>0</td><td>0</td><td>0</td><td>—</td></tr>
+  </tbody>
+</table>
+
+<div class="enterBox">Eligible: t₄. Enter <b>t₄</b> from LB.</div>
+<div class="artBox">
+  <b>ART for t₄↑:</b> Row t₃ ⇒ t₃ increases with θ; row limit (t₃→UB)=1; Opposite-bound(t₄)=1 ⇒ tie ⇒ <b>row pivot</b>, θ=1.
+</div>
+<div class="objBox">r(t₄)=−1, θ=1 ⇒ Δz=−1 ⇒ z: −1 → <b>−2</b>.</div>
+
+<h3>P1–Step 4 — After nondegenerate pivot (t₄ basic; t₃→UB)</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Basic</th><th>RHS</th>
+      <th>t₁</th><th>t₂</th><th>t₃</th><th>t₄</th>
+      <th>Tx</th><th>Ty</th><th>Tz</th>
+      <th class="status">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>t₂</td><td>1</td><td>−1</td><td>+1</td><td>0</td><td>0</td><td>0</td><td>+1</td><td>0</td><td class="status">t₂:<span class="b">B</span></td></tr>
+    <tr class="lockRow"><td><b>Ty</b></td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>+1</td><td>0</td><td class="status">Ty:<span class="b">B</span></td></tr>
+    <tr><td><b>t₄</b></td><td>1</td><td>0</td><td>0</td><td>−1</td><td>+1</td><td>0</td><td>0</td><td>+1/200</td><td class="status">t₄:<span class="b">B</span>; t₃:<span class="ub">UB</span></td></tr>
+    <tr class="zrow"><td><b>z</b></td><td><b>−2</b></td><td><b>0</b></td><td><b>0</b></td><td><b>0</b></td><td><b>0</b></td><td>0</td><td>0</td><td>0</td><td>—</td></tr>
+  </tbody>
+</table>
+
+<div class="consBox">
+  <b>Discovered torque constraints at zero torque:</b> <span class="math">t₁=t₂</span> and <span class="math">t₃=t₄</span>.  
+  These will be carried into P2 as explicit equality rows.
+</div>
+
+<hr/>
+
+<!-- ============================ PRIORITY 2 ============================ -->
+<h2>Priority 2 — Lock torque, add discovered equalities, include forces; set <b>Fx=50</b></h2>
+
+<div class="consBox">
+  Locked torque rows: Tx=0, Ty=0, Tz=0 (stay basic).  
+  Pairwise equalities: C₁: <span class="math">t₁−t₂=0</span>, C₂: <span class="math">t₃−t₄=0</span> (kept inside).  
+  Forces (since aᵢ=(100,100,100)): Fx−100Σt=0, Fy−100Σt=0, Fz−100Σt=0 (added as basic rows).  
+  Force bound: <b>Fx = 50</b> (LB=UB=50) ⇒ immediately implies <span class="math">Σt = 50/100 = 0.5</span>.  
+  Bounds: keep 0≤tᵢ≤1 (no additional tightening).
+</div>
+
+<h3>P2–Step 0 — Initial P2 tableau</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Basic</th><th>RHS</th>
+      <th>t₁</th><th>t₂</th><th>t₃</th><th>t₄</th>
+      <th>Tx</th><th>Ty</th><th>Tz</th><th>Fx</th><th>Fy</th><th>Fz</th>
+      <th class="status">Status (LB/UB/B)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- locked torque -->
+    <tr class="lockRow"><td><b>Tx</b></td><td>0</td><td>−200</td><td>+200</td><td>0</td><td>0</td><td>+1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td>
+      <td class="status">Tx:<span class="b">B</span> (locked)</td></tr>
+    <tr class="lockRow"><td><b>Ty</b></td><td>0</td><td>+200</td><td>−200</td><td>−200</td><td>+200</td><td>0</td><td>+1</td><td>0</td><td>0</td><td>0</td><td>0</td>
+      <td class="status">Ty:<span class="b">B</span> (locked)</td></tr>
+    <tr class="lockRow"><td><b>Tz</b></td><td>0</td><td>0</td><td>0</td><td>+200</td><td>−200</td><td>0</td><td>0</td><td>+1</td><td>0</td><td>0</td><td>0</td>
+      <td class="status">Tz:<span class="b">B</span> (locked)</td></tr>
+    <!-- forces -->
+    <tr><td><b>Fx</b></td><td><b>50</b></td><td>−100</td><td>−100</td><td>−100</td><td>−100</td><td>0</td><td>0</td><td>0</td><td>+1</td><td>0</td><td>0</td>
+      <td class="status">Fx:<span class="b">B</span>, <span class="ub">LB=UB=50</span></td></tr>
+    <tr><td><b>Fy</b></td><td>0</td><td>−100</td><td>−100</td><td>−100</td><td>−100</td><td>0</td><td>0</td><td>0</td><td>0</td><td>+1</td><td>0</td>
+      <td class="status">Fy:<span class="b">B</span></td></tr>
+    <tr><td><b>Fz</b></td><td>0</td><td>−100</td><td>−100</td><td>−100</td><td>−100</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>+1</td>
+      <td class="status">Fz:<span class="b">B</span></td></tr>
+    <!-- pairwise equalities -->
+    <tr class="consBox"><td><b>t₁</b> (C₁: t₁−t₂=0)</td><td>0</td><td>+1</td><td>−1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td>
+      <td class="status">t₁:<span class="b">B</span></td></tr>
+    <tr class="consBox"><td><b>t₃</b> (C₂: t₃−t₄=0)</td><td>0</td><td>0</td><td>0</td><td>+1</td><td>−1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td>
+      <td class="status">t₃:<span class="b">B</span></td></tr>
+    <!-- objective -->
+    <tr class="zrow">
+      <td><b>z (min)</b></td><td><b>0</b></td>
+      <td><b>0</b></td><td><b>−2</b></td><td><b>0</b></td><td><b>−2</b></td>
+      <td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td>
+      <td class="status">LB nonbasics: t₂,t₄</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="consBox">
+  <b>Constraint influence (red):</b>
+  <ul>
+    <li>C₁ couples (t₁,t₂): they move together ⇒ entering t₂ gives effective <b>r(t₂)=−2</b> (one from t₂, one via t₁).</li>
+    <li>C₂ couples (t₃,t₄): similarly, entering t₄ gives <b>r(t₄)=−2</b>.</li>
+    <li><b>Fx=50</b> enforces Σt = 0.5 (since Fx = 100·Σt). This caps the <b>sum of paired motion</b>.</li>
+  </ul>
+</div>
+
+<div class="enterBox">Eligible LB: t₂ and t₄ (both r=−2). Bland ⇒ choose <b>t₂</b> to enter.</div>
+<div class="artBox">
+  <b>ART (yellow) for t₂↑ under Fx=50:</b><br/>
+  • From C₁, t₁ increases with the same step θ ⇒ the pair consumes Σt by <b>2θ</b>.<br/>
+  • Fx lock requires Σt = 0.5. Starting at t=0, we must keep 2θ ≤ 0.5 ⇒ <b>θ ≤ 0.25</b>.<br/>
+  • Opposite-bound(t₂)=1 ⇒ the <b>Fx lock wins</b> and sets θ=0.25.  
+  This is implemented as a <b>row pivot on C₁</b> with step θ=0.25: <b>t₂ enters, t₁ leaves to 0.25</b>.
+</div>
+<div class="objBox">
+  <b>Objective / net row (green):</b> r(t₂)=−2, θ=0.25 ⇒ <span class="math">Δz = r·θ = −2·0.25 = −0.5</span>.  
+  New objective: z: 0 → <b>−0.5</b>.  
+  Values: t₁=t₂=0.25, t₃=t₄=0; Σt = 0.5 satisfies Fx=50.
+</div>
+
+<h3>P2–Step 1 — After pivot (t₂ basic; Fx=50 satisfied)</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Basic</th><th>RHS</th>
+      <th>t₁</th><th>t₂</th><th>t₃</th><th>t₄</th>
+      <th>Tx</th><th>Ty</th><th>Tz</th><th>Fx</th><th>Fy</th><th>Fz</th>
+      <th class="status">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>t₂</b></td><td>0.25</td>
+      <td>−1</td><td class="pivotcell">+1</td><td>0</td><td>0</td>
+      <td>0</td><td>+1</td><td>0</td><td>+50</td><td>+25</td><td>+25</td>
+      <td class="status">t₂:<span class="b">B</span>; t₁ at 0.25 (<span class="b">feasible</span>)</td>
+    </tr>
+    <tr class="lockRow"><td>Tx</td><td>0</td><td>−200</td><td>+200</td><td>0</td><td>0</td><td>+1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td>
+      <td class="status">locked</td></tr>
+    <tr class="lockRow"><td>Ty</td><td>0</td><td>0</td><td>0</td><td>−200</td><td>+200</td><td>0</td><td>+1</td><td>−1</td><td>0</td><td>0</td><td>0</td>
+      <td class="status">locked</td></tr>
+    <tr class="lockRow"><td>Tz</td><td>0</td><td>0</td><td>0</td><td>+200</td><td>−200</td><td>0</td><td>0</td><td>+1</td><td>0</td><td>0</td><td>0</td>
+      <td class="status">locked</td></tr>
+    <tr><td>Fx</td><td>50</td><td>−100</td><td>−100</td><td>−100</td><td>−100</td><td>0</td><td>0</td><td>0</td><td>+1</td><td>0</td><td>0</td>
+      <td class="status"><span class="ub">LB=UB=50</span></td></tr>
+    <tr><td>Fy</td><td>50</td><td>−100</td><td>−100</td><td>−100</td><td>−100</td><td>0</td><td>0</td><td>0</td><td>0</td><td>+1</td><td>0</td>
+      <td class="status">B</td></tr>
+    <tr><td>Fz</td><td>50</td><td>−100</td><td>−100</td><td>−100</td><td>−100</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>+1</td>
+      <td class="status">B</td></tr>
+    <tr class="consBox"><td>t₁ (C₁)</td><td>0.25</td><td>+1</td><td>−1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td>
+      <td class="status">paired with t₂ (θ already used)</td></tr>
+    <tr class="consBox"><td>t₃ (C₂)</td><td>0</td><td>0</td><td>0</td><td>+1</td><td>−1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td>
+      <td class="status">t₃:<span class="b">B</span></td></tr>
+    <tr class="zrow"><td><b>z</b></td><td><b>−0.5</b></td>
+      <td><b>0</b></td><td><b>0</b></td><td><b>−2</b></td><td><b>−2</b></td>
+      <td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td>
+      <td class="status">Σt fixed at 0.5</td></tr>
+  </tbody>
+</table>
+
+<div class="enterBox">What about t₄? It is LB nonbasic with r=−2, but…</div>
+<div class="artBox">
+  <b>ART for t₄↑ now:</b> C₂ would move (t₃,t₄) together by θ, consuming Σt by 2θ.  
+  Σt is already 0.5 (locked by Fx=50). Any θ&gt;0 would violate Fx. ⇒ <b>θ=0</b>.  
+  That yields either a blocked move or a zero-step (degenerate) basis change with no objective improvement.
+</div>
+<div class="objBox">
+  Since no eligible nonbasic can move (θ&gt;0) without violating Fx or pairwise constraints, the current solution is <b>optimal for P2</b>.  
+  Final: t₁=t₂=0.25, t₃=t₄=0, Tx=Ty=Tz=0, Fx=Fy=Fz=50, z=<b>−0.5</b>.
+</div>
+
+<h3>P2 — Final</h3>
+<table>
+  <thead>
+    <tr><th>Variable</th><th>Value</th><th>Status</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>t₁,t₂</td><td>0.25, 0.25</td><td>t₂ <span class="b">B</span>, t₁ paired via C₁</td></tr>
+    <tr><td>t₃,t₄</td><td>0, 0</td><td>both <span class="lb">LB</span>, coupled via C₂</td></tr>
+    <tr><td>Tx,Ty,Tz</td><td>0,0,0</td><td><span class="b">B</span> (locked)</td></tr>
+    <tr><td>Fx,Fy,Fz</td><td>50,50,50</td><td>Fx <span class="ub">LB=UB=50</span>; Fy,Fz <span class="b">B</span></td></tr>
+    <tr><td>z</td><td><b>−0.5</b></td><td>Optimal (Σt=0.5 enforced by Fx)</td></tr>
+  </tbody>
+</table>
+
+<hr/>
+
+<h2>Objective & Net-Evaluation Row — How it’s computed (Minimization)</h2>
+<div class="objBox">
+  <ul>
+    <li><b>Reduced costs:</b> <span class="math">r_j = c_j − c_B^T B^{-1} a_j</span>. For an LB nonbasic, eligibility is <span class="math">r_j &lt; 0</span>.</li>
+    <li><b>Net objective change at a step:</b> if entering variable has reduced cost <span class="math">r_{enter}</span> before the step and ART picks step <span class="math">θ</span>, then
+      <span class="math">Δz = r_{enter} \cdot θ</span>.</li>
+    <li><b>After a row pivot:</b> the entering variable becomes basic ⇒ its reduced cost becomes 0 (its column is now part of the basis).</li>
+    <li><b>Coupled equalities (C₁,C₂):</b> when a nonbasic enters, its paired basic moves with the same θ, effectively doubling the contribution ⇒ e.g. <span class="math">r(t₂)=−2</span> and <span class="math">r(t₄)=−2</span> in P2.</li>
+    <li><b>ART with bounds/equalities:</b> compare <i>row limits</i> (basics hitting LB/UB) and <i>opposite bound</i> of the entering var; also include “locked” equalities such as Fx=50 (which restricts Σt). The smallest permissible θ wins.</li>
+  </ul>
+</div>
+
+</main>
+</body>
+</html>

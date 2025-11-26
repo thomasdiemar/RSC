@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Preemptive Bounded Simplex — Handling the Equality t₁ = t₂ (HTML Demo)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root{
+    --ink:#1f2328; --muted:#586069; --bg:#f7f9fb; --line:#dce1e7;
+    --enter:#e6f0ff; --enter-b:#7aa2ff;          /* choosing entering */
+    --art:#fff3b0; --art-b:#e0cc7a;              /* ART / ratio test */
+    --norm:#ffe9cc; --norm-b:#f0b76b;            /* normalize pivot row */
+    --obj:#e8f7e8; --obj-b:#9ad89a;              /* objective row */
+    --leave:#ffe6ea; --leave-b:#ff9db0;          /* leaving row */
+    --lock:#eef2ff; --lock-b:#c7d2fe;            /* locked/constraint */
+  }
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+            font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  main{max-width:1100px;margin:28px auto;padding:0 18px}
+  h1{font-size:1.9rem;margin:.2rem 0 1rem}
+  h2{margin:1.2rem 0 .6rem}
+  h3{margin:.9rem 0 .4rem}
+  p.lead{color:var(--muted)}
+  .card{background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 1px 0 rgba(0,0,0,.03);margin:.7rem 0}
+  .hd{padding:10px 12px;border-bottom:1px solid var(--line);font-weight:600}
+  .bd{padding:12px}
+  table{width:100%;border-collapse:collapse;margin:.6rem 0}
+  th,td{border:1px solid var(--line);padding:6px 8px;text-align:right}
+  th:first-child,td:first-child{text-align:left}
+  .status{text-align:center;white-space:nowrap}
+  .zrow td,.zrow th{background:var(--obj);font-weight:700;border-color:var(--obj-b)}
+  .enterBox{background:var(--enter);border:1px solid var(--enter-b);border-radius:8px;padding:10px;margin:.5rem 0}
+  .artBox{background:var(--art);border:1px solid var(--art-b);border-radius:8px;padding:10px;margin:.5rem 0}
+  .normBox{background:var(--norm);border:1px solid var(--norm-b);border-radius:8px;padding:10px;margin:.5rem 0}
+  .leaveRow{background:var(--leave);border-color:var(--leave-b)}
+  .lockRow{background:var(--lock);border-color:var(--lock-b)}
+  .pivotcell{background:var(--norm);border:2px solid var(--norm-b);font-weight:700}
+  code,.math{background:#f6f8fa;border:1px solid var(--line);padding:0 .25rem;border-radius:4px}
+  .tiny{font-size:.92rem;color:var(--muted)}
+  .pill{display:inline-block;padding:.1rem .55rem;border-radius:999px;border:1px solid var(--line);background:#fff}
+  .grid{display:grid;gap:12px}
+  .grid.cols-2{grid-template-columns:1fr 1fr}
+</style>
+</head>
+<body>
+<main>
+
+<h1>Handling the Equality <span class="math">t₁ = t₂</span> inside a Preemptive Bounded Simplex Tableau</h1>
+<p class="lead">
+We keep the real bounds <span class="math">ℓ ≤ t ≤ u</span> in the algorithm and represent the equality
+as a real tableau row. This demo shows: (1) the equality row, (2) choosing an entering variable,
+(3) the Augmented Ratio Test (ART), (4) a row pivot with <em>normalize pivot row</em>, and
+(5) a bound-hit case with no pivot.
+</p>
+
+<div class="card">
+  <div class="hd">Problem for the demo (minimal but complete)</div>
+  <div class="bd">
+    <ul>
+      <li><b>Variables:</b> <span class="math">t₁,t₂</span>. (You can have more; we focus on the pair.)</li>
+      <li><b>Bounds:</b> <span class="math">0 ≤ t₁,t₂ ≤ 0.5</span>.</li>
+      <li><b>Equality in-tableau:</b> <span class="math">t₁ − t₂ = 0</span> (this enforces <span class="math">t₁=t₂</span>).</li>
+      <li><b>Objective (min):</b> <span class="math">z = −(t₁ + t₂)</span> (min “negative-sum” ≡ max sum).</li>
+    </ul>
+    <p class="tiny">We start at LB: <span class="math">t=(0,0)</span>, which satisfies <span class="math">t₁−t₂=0</span>.</p>
+  </div>
+</div>
+
+<h2>Stage / Iteration A — Equality row with <b>t₁</b> basic</h2>
+
+<h3>Initial tableau (t₁ basic in the equality row)</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Basic</th><th>RHS</th><th>t₁</th><th>t₂</th><th class="status">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="lockRow">
+      <td><b>t₁</b> (row: <span class="math">t₁ − t₂ = 0</span>)</td>
+      <td>0</td>
+      <td>+1</td>
+      <td>−1</td>
+      <td class="status">B (enforces t₁=t₂)</td>
+    </tr>
+    <tr class="zrow">
+      <td><b>z (min)</b></td>
+      <td><b>0</b></td>
+      <td>—</td>
+      <td><b>r(t₂) = −2</b></td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="enterBox">
+  <b>Choose entering (blue):</b> Minimization ⇒ a nonbasic at LB can enter if its reduced cost <span class="math">r&lt;0</span>.  
+  Here <span class="math">t₂</span> at LB has <b>r(t₂)=−2</b> (one unit from itself and one unit induced via the equality row).  
+  ⇒ <span class="pill">Enter <b>t₂</b> from LB</span>.
+</div>
+
+<div class="artBox">
+  <b>ART (yellow):</b> With basis row <span class="math">t₁ − t₂ = 0</span>, the entering column coefficient is −1.  
+  Direction for basics <span class="math">d = B⁻¹ a₂ = −1</span> ⇒ <span class="math">Δt₁ = −d·θ = +θ</span>, <span class="math">Δt₂=+θ</span>.
+  <ul>
+    <li><b>Row limit (t₁ toward UB):</b> <span class="math">θ_row = (u₁ − t₁)/(-d) = (0.5 − 0)/1 = 0.5</span>.</li>
+    <li><b>Opposite bound of entering t₂:</b> <span class="math">θ_bound = u₂ − t₂ = 0.5 − 0 = 0.5</span>.</li>
+    <li>Minimum = 0.5 (row–bound tie) ⇒ treat as a <b>row pivot</b> at <span class="math">θ=0.5</span>.</li>
+  </ul>
+</div>
+
+<div class="normBox">
+  <b>Normalize pivot row (orange):</b> Pivot element is the (row t₁, col t₂) entry = −1.  
+  Divide the whole equality row by −1 so the pivot becomes 1. Then eliminate column t₂ elsewhere.
+</div>
+
+<h3>After the row pivot (t₂ becomes basic; t₁ leaves to UB = 0.5)</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Basic</th><th>RHS</th><th>t₁</th><th>t₂</th><th class="status">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>t₂</b> (row)</td>
+      <td>0.5</td>
+      <td>−1</td>
+      <td class="pivotcell">+1</td>
+      <td class="status">B</td>
+    </tr>
+    <tr class="zrow">
+      <td><b>z (min)</b></td>
+      <td><b>−1</b></td>
+      <td>0</td>
+      <td>0</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<ul>
+  <li><b>Values:</b> <span class="math">t₁=0.5</span> (at UB), <span class="math">t₂=0.5</span> (basic). Equality still holds (0.5 − 0.5 = 0).</li>
+  <li><b>Objective update:</b> Before pivot, <span class="math">r(t₂)=−2</span>, step <span class="math">θ=0.5</span> ⇒ <span class="math">Δz = (−2)·0.5 = −1</span>.  
+      z: 0 → <b>−1</b>.</li>
+  <li><b>Interpretation:</b> The equality row is preserved; it has merely swapped which variable is basic.  
+      We did not eliminate variables or bounds; everything stayed inside the tableau.</li>
+</ul>
+
+<hr/>
+
+<h2>Stage / Iteration B — Bound hit without pivot (preemptive bound win)</h2>
+<p class="tiny">Now change just one bound to illustrate a pure “bound hit” case:</p>
+<ul>
+  <li>Keep equality row <span class="math">t₁ − t₂ = 0</span> (with <b>t₁</b> basic at start).</li>
+  <li>Use <span class="math">0 ≤ t₁ ≤ 0.5</span>, <span class="math">0 ≤ t₂ ≤ 0.3</span>.</li>
+  <li>Start at <span class="math">t=(0,0)</span>.</li>
+</ul>
+
+<h3>Initial tableau (as before, with tighter UB for t₂)</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Basic</th><th>RHS</th><th>t₁</th><th>t₂</th><th class="status">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="lockRow">
+      <td><b>t₁</b> (row: <span class="math">t₁ − t₂ = 0</span>)</td>
+      <td>0</td>
+      <td>+1</td>
+      <td>−1</td>
+      <td class="status">B</td>
+    </tr>
+    <tr class="zrow">
+      <td><b>z (min)</b></td>
+      <td><b>0</b></td>
+      <td>—</td>
+      <td><b>r(t₂)=−2</b></td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="enterBox"><b>Enter t₂ from LB</b> (still r=−2 &lt; 0).</div>
+
+<div class="artBox">
+  <b>ART (yellow):</b> direction is the same: <span class="math">d = −1</span> ⇒ <span class="math">Δt₁=+θ</span>, <span class="math">Δt₂=+θ</span>.
+  <ul>
+    <li><b>Row limit (t₁ toward UB):</b> <span class="math">θ_row = 0.5</span>.</li>
+    <li><b>Opposite bound of t₂:</b> <span class="math">θ_bound = u₂ − t₂ = 0.3 − 0 = 0.3</span>.</li>
+  </ul>
+  Here the <b>opposite bound is strictly smallest</b> (0.3 &lt; 0.5) ⇒ <b>preemptive bound hit</b>, <b>no pivot</b>.
+</div>
+
+<h3>“No pivot” update</h3>
+<ul>
+  <li>Set <b>t₂ ← 0.3</b>, update basics by <span class="math">t₁ ← t₁ + θ = 0 + 0.3 = 0.3</span>.</li>
+  <li>Basis unchanged; equality holds because the row updated both sides consistently.</li>
+  <li>Recompute reduced costs for next iteration.</li>
+</ul>
+
+<table>
+  <thead>
+    <tr>
+      <th>Basic</th><th>RHS</th><th>t₁</th><th>t₂</th><th class="status">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="lockRow">
+      <td><b>t₁</b> (row)</td>
+      <td>0.3</td>
+      <td>+1</td>
+      <td>−1</td>
+      <td class="status">B</td>
+    </tr>
+    <tr class="zrow">
+      <td><b>z (min)</b></td>
+      <td><b>−0.6</b></td>
+      <td>—</td>
+      <td>recompute r(t₂)</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="tiny">
+<b>Key difference vs the pivot case:</b> we did <em>not</em> normalize or swap basis. The ART chose the entering
+variable’s opposite bound as the limiter, so we moved there and stayed with the same basis. Equality remained intact.
+</p>
+
+<hr/>
+
+<h2>What this shows about “t₁ = t₂” in a bounded preemptive simplex</h2>
+<ul>
+  <li>The equality is kept as a real tableau row (with a basic variable). You do <u>not</u> eliminate variables or reparameterize.</li>
+  <li>When a coupled nonbasic (here <b>t₂</b>) enters, the equality row is the <b>direction column</b> for the basics:
+      the basic in that row (here <b>t₁</b>) moves together with <b>t₂</b>.</li>
+  <li>ART decides whether you <b>pivot</b> (row win/tie) or do a <b>preemptive bound hit</b> (opposite bound strictly smallest).</li>
+  <li>If you pivot, you <b>normalize the pivot row</b> (divide by the pivot element) and zero the entering column elsewhere.
+      The equality remains, but it may now “solve for” the other variable (t₂ basic, t₁ nonbasic).</li>
+  <li>Under preemptive (priority) goals, you keep the equality row across stages—so the coupling persists while later objectives are optimized.</li>
+</ul>
+
+</main>
+</body>
+</html>

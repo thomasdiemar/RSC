@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Preemptive Bounded Simplex — Handling the equality t₁ = t₂ (HTML demo)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root{
+    --ink:#1f2328; --muted:#606c7a; --bg:#f7f9fb; --line:#e5e7eb;
+    --enter:#e6f0ff; --enter-b:#7aa2ff;      /* choosing entering */
+    --art:#fff3b0; --art-b:#e0cc7a;          /* ART calculations */
+    --norm:#fde68a; --norm-b:#d4ad55;        /* normalization highlight */
+    --obj:#e8f7e8; --obj-b:#9ad89a;          /* objective row */
+    --leave:#ffe6ea; --leave-b:#ff9db0;      /* leaving row */
+    --lock:#f1f5f9; --lock-b:#cbd5e1;        /* locked row look */
+  }
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+            font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  main{max-width:1200px;margin:28px auto;padding:0 18px}
+  h1{font-size:1.9rem;margin:.2rem 0 1rem}
+  h2{margin:1.2rem 0 .6rem}
+  h3{margin:1rem 0 .5rem}
+  p.lead{color:var(--muted)}
+  .card{background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 1px 0 rgba(0,0,0,.03);margin:.7rem 0}
+  .hd{padding:10px 12px;border-bottom:1px solid var(--line);font-weight:600}
+  .bd{padding:12px}
+  .note{background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:10px 12px}
+  table{width:100%;border-collapse:collapse;margin:.6rem 0}
+  th,td{border:1px solid var(--line);padding:6px 8px;text-align:right}
+  th:first-child,td:first-child{text-align:left}
+  .status{text-align:center;white-space:nowrap}
+  .zrow td,.zrow th{background:var(--obj);font-weight:700;border-color:var(--obj-b)}
+  .enter{background:var(--enter);border:1px solid var(--enter-b);border-radius:8px;padding:10px;margin:.5rem 0}
+  .art{background:var(--art);border:1px solid var(--art-b);border-radius:8px;padding:10px;margin:.5rem 0}
+  .norm{background:var(--norm);border:1px solid var(--norm-b);border-radius:8px;padding:10px;margin:.5rem 0}
+  .leave-row{background:var(--leave);border:1px solid var(--leave-b)}
+  .pivotcell{background:var(--norm);border:2px solid var(--norm-b);font-weight:700}
+  .lock{background:var(--lock);border-color:var(--lock-b)}
+  .math,code{background:#f6f8fa;border:1px solid var(--line);padding:0 .25rem;border-radius:4px}
+  .grid{display:grid;gap:16px}
+  .cols-2{grid-template-columns:1fr 1fr}
+  .tiny{font-size:.92rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+
+<h1>Handling the equality <span class="math">t₁ = t₂</span> in a Preemptive Bounded Simplex Tableau</h1>
+<p class="lead">
+We keep bounds inside the simplex and represent the equality as a real tableau row.
+Below, three small scenarios show: (A) a <b>row pivot</b> (θ&gt;0), (B) a <b>preemptive bound hit</b> (no pivot), and (C) a <b>degenerate row pivot</b> (θ=0).
+All three enforce <span class="math">t₁ = t₂</span> without substitutions and with full LB/UB logic.
+</p>
+
+<div class="card">
+  <div class="hd">Common setup (applies to all scenarios)</div>
+  <div class="bd">
+    <ul>
+      <li>Equality row kept inside the basis: <span class="math">t₁ − t₂ = 0</span>.</li>
+      <li>Objective (minimization): <span class="math">z = −(t₁ + t₂)</span> (fuel proxy).</li>
+      <li>Reduced-cost rule (min): LB nonbasic can enter if <span class="math">r &lt; 0</span>, UB nonbasic if <span class="math">r &gt; 0</span>.</li>
+      <li>At the start we take the equality row as basic (solving for <b>t₁</b>), nonbasic <b>t₂</b> at LB.</li>
+      <li>Because of the coupling, pricing typically gives <span class="math">r(t₂) = -2</span> (one unit from t₂ itself + one unit from induced basic t₁ move).</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============ SCENARIO A: ROW PIVOT (theta>0) ============ -->
+<div class="card">
+  <div class="hd">Scenario A — Row pivot (θ &gt; 0): both have room; we pivot on the equality row</div>
+  <div class="bd">
+    <div class="note">
+      Bounds: <span class="math">0 ≤ t₁ ≤ 1</span>, <span class="math">0 ≤ t₂ ≤ 1</span>. Start at <span class="math">t₁=t₂=0</span> (feasible).
+    </div>
+
+    <h3>Initial tableau (equality row is basic)</h3>
+    <table>
+      <thead><tr><th>Basic</th><th>RHS</th><th>t₁</th><th>t₂</th><th class="status">Status</th></tr></thead>
+      <tbody>
+        <tr class="leave-row">
+          <td><b>t₁</b> (from <span class="math">t₁ − t₂ = 0</span>)</td><td>0</td><td>+1</td><td class="pivotcell">−1</td><td class="status">B</td>
+        </tr>
+        <tr class="zrow">
+          <td><b>z (min)</b></td><td><b>0</b></td><td>—</td><td><b>r(t₂)=−2</b></td><td></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="enter"><b>Choose entering:</b> Minimization & LB ⇒ <span class="math">r(t₂)=-2&lt;0</span> ⇒ enter <b>t₂</b> from LB.</div>
+
+    <div class="art">
+      <b>ART (step limits)</b><br/>
+      Direction in basic space: the <span class="math">t₂</span>-column in this row is −1 ⇒ <span class="math">d = −1</span>.<br/>
+      Basics move: <span class="math">Δt₁ = −d·θ = +θ</span>, entering moves: <span class="math">Δt₂ = +θ</span>.<br/>
+      Row limit: t₁ can increase up to UB 1 ⇒ <span class="math">θ_row = (1−0)/1 = 1</span>.<br/>
+      Opposite bound of t₂: <span class="math">θ_bound = (1−0)=1</span>.<br/>
+      Tie ⇒ <b>row pivot</b> at <span class="math">θ=1</span>.
+    </div>
+
+    <div class="norm"><b>Normalize pivot row:</b> pivot element is −1 ⇒ divide the row by −1 to make it +1 in column t₂.</div>
+
+    <h3>Tableau after (non-degenerate) pivot</h3>
+    <table>
+      <thead><tr><th>Basic</th><th>RHS</th><th>t₁</th><th>t₂</th><th class="status">Status</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>t₂</b> (row)</td><td>1</td><td>−1</td><td>+1</td><td class="status">B</td>
+        </tr>
+        <tr class="zrow">
+          <td><b>z (min)</b></td><td><b>−2</b></td><td>0</td><td>0</td><td></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="tiny">
+      Numerically: θ=1 ⇒ <span class="math">t₂:0→1</span>, <span class="math">t₁:0→1</span> (equality preserved).
+      Objective update: <span class="math">Δz = r_enter·θ = (−2)·1 = −2</span>.  
+      The equality still holds, but the basic variable is now <b>t₂</b> (row solves for t₂ = t₁).
+    </p>
+  </div>
+</div>
+
+<!-- ============ SCENARIO B: PREEMPTIVE BOUND HIT (no pivot) ============ -->
+<div class="card">
+  <div class="hd">Scenario B — Preemptive bound hit (no pivot): entering hits its own UB first</div>
+  <div class="bd">
+    <div class="note">
+      Bounds: <span class="math">0 ≤ t₁ ≤ 1</span>, <span class="math">0 ≤ t₂ ≤ 0.4</span>. Start at <span class="math">t=0</span>.
+    </div>
+
+    <h3>Same initial tableau</h3>
+    <table>
+      <thead><tr><th>Basic</th><th>RHS</th><th>t₁</th><th>t₂</th><th class="status">Status</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>t₁</b> (row)</td><td>0</td><td>+1</td><td class="pivotcell">−1</td><td class="status">B</td>
+        </tr>
+        <tr class="zrow">
+          <td><b>z (min)</b></td><td><b>0</b></td><td>—</td><td><b>r(t₂)=−2</b></td><td></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="enter"><b>Choose entering:</b> again <b>t₂</b> from LB (r&lt;0).</div>
+
+    <div class="art">
+      <b>ART:</b> <span class="math">d = −1</span> ⇒ <span class="math">Δt₁=+θ</span>.  
+      Row limit (t₁): <span class="math">θ_row = (1−0)/1 = 1</span>.  
+      Opposite bound (t₂): <span class="math">θ_bound = (0.4−0) = 0.4</span>.<br/>
+      <b>Opposite bound strictly smaller</b> ⇒ <b>preemptive bound hit</b>, <u>no pivot</u>.
+    </div>
+
+    <h3>Values after bound hit (basis unchanged)</h3>
+    <table>
+      <thead><tr><th>Var</th><th>Old</th><th>Δ</th><th>New</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>t₂</td><td>0</td><td>+0.4</td><td>0.4</td><td>moved to UB</td></tr>
+        <tr><td>t₁</td><td>0</td><td>+0.4</td><td>0.4</td><td>basic updated</td></tr>
+      </tbody>
+    </table>
+
+    <p class="tiny">
+      Equality <span class="math">t₁=t₂</span> remains satisfied because the basic row was kept; we simply moved along that row
+      until the entering variable hit its own UB. No Gauss–Jordan pivot occurs; next iteration re-prices with the same basis.
+    </p>
+  </div>
+</div>
+
+<!-- ============ SCENARIO C: DEGENERATE ROW PIVOT (theta=0) ============ -->
+<div class="card">
+  <div class="hd">Scenario C — Degenerate row pivot (θ = 0): equality row blocks immediately</div>
+  <div class="bd">
+    <div class="note">
+      Bounds: <span class="math">t₁</span> is fixed at 0 (LB=UB=0), <span class="math">0 ≤ t₂ ≤ 1</span>. Start at <span class="math">t=0</span>.
+    </div>
+
+    <h3>Initial tableau</h3>
+    <table>
+      <thead><tr><th>Basic</th><th>RHS</th><th>t₁</th><th>t₂</th><th class="status">Status</th></tr></thead>
+      <tbody>
+        <tr class="leave-row">
+          <td><b>t₁</b> (row)</td><td>0</td><td>+1</td><td class="pivotcell">−1</td><td class="status">B (LB=UB=0)</td>
+        </tr>
+        <tr class="zrow">
+          <td><b>z (min)</b></td><td><b>0</b></td><td>—</td><td><b>r(t₂)=−2</b></td><td></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="enter"><b>Choose entering:</b> <b>t₂</b> from LB again (r&lt;0).</div>
+
+    <div class="art">
+      <b>ART:</b> <span class="math">d = −1</span> ⇒ <span class="math">Δt₁=+θ</span>.  
+      But t₁ is fixed at 0: first hit is UB=0 with <span class="math">θ_row = 0</span>.  
+      Opposite bound of t₂: <span class="math">θ_bound = 1</span>.  
+      <b>Row wins at θ=0</b> ⇒ <b>degenerate row pivot</b>.
+    </div>
+
+    <div class="norm"><b>Normalize & pivot (θ=0):</b> divide the pivot row by −1 to make +1 in col t₂; zero that column elsewhere; relabel row’s basic from t₁→t₂.</div>
+
+    <h3>Tableau after (degenerate) pivot</h3>
+    <table>
+      <thead><tr><th>Basic</th><th>RHS</th><th>t₁</th><th>t₂</th><th class="status">Status</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>t₂</b> (row)</td><td>0</td><td>−1</td><td>+1</td><td class="status">B</td>
+        </tr>
+        <tr class="zrow">
+          <td><b>z (min)</b></td><td><b>0</b></td><td><b>r(t₁)</b> (recomputed)</td><td>0</td><td></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="tiny">
+      The basis changed (can unblock pricing later), but the point stayed at <span class="math">t=0</span> because θ=0.
+      The equality <span class="math">t₁=t₂</span> is still enforced; the row now solves for <b>t₂</b> instead of <b>t₁</b>.
+    </p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="hd">What to remember</div>
+  <div class="bd">
+    <ul>
+      <li><b>Equality as a row:</b> Keep <span class="math">t₁ − t₂ = 0</span> as a tableau row with a basic variable (no substitution).</li>
+      <li><b>Coupled movement:</b> When <b>t₂</b> enters, the equality row forces the basic (e.g., <b>t₁</b>) to move with it (the direction column).</li>
+      <li><b>ART outcomes:</b> (i) row pivot, (ii) bound hit (no pivot), (iii) degenerate pivot (θ=0). Equality is preserved in all three.</li>
+      <li><b>Preemptive stages:</b> Once a priority cancels torque via these equalities, keep those rows in the basis for lower priorities (“locked” constraints).</li>
+    </ul>
+  </div>
+</div>
+
+</main>
+</body>
+</html>

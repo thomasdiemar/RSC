@@ -1,0 +1,139 @@
+\documentclass{article}
+\usepackage{amsmath, amssymb, amsfonts, geometry}
+\geometry{margin=1in}
+\begin{document}
+
+\title{Preemptive Goal Linear Programming for Force-Neutral Thruster Firing}
+\author{}
+\date{}
+\maketitle
+
+\section{Thruster Geometry}
+
+For thruster \( i = 1, \dots, n \):
+\begin{itemize}
+    \item Position (lever arm) in body frame: \( \mathbf{r}_i \in \mathbb{R}^3 \)
+    \item Unit direction vector: \( \mathbf{d}_i \in \mathbb{R}^3 \)
+    \item Thrust magnitude (decision variable): \( t_i \ge 0 \)
+\end{itemize}
+
+Resultant body-frame force and torque:
+\begin{align}
+    \mathbf{F} &= \sum_{i=1}^{n} t_i \mathbf{d}_i, \\
+    \boldsymbol{\tau} &= \sum_{i=1}^{n} t_i (\mathbf{r}_i \times \mathbf{d}_i),
+\end{align}
+where
+\[
+\mathbf{h}_i := \mathbf{r}_i \times \mathbf{d}_i
+\]
+is the torque arm vector for thruster \(i\).
+
+\section{Linear Constraints with Goal Variables}
+
+We introduce positive and negative deviation variables to maintain linearity.
+
+\subsection*{Primary goal: Force neutralization}
+\begin{equation}
+    \sum_i d_{i,k} t_i + e^{F,-}_k - e^{F,+}_k = 0,
+    \qquad k \in \{x,y,z\}.
+\end{equation}
+
+\subsection*{Secondary goal: Desired torque}
+\begin{equation}
+    \sum_i h_{i,k} t_i + e^{\tau,-}_k - e^{\tau,+}_k = \tau^{\text{des}}_k,
+    \qquad k \in \{x,y,z\}.
+\end{equation}
+
+\subsection*{Bounds}
+\begin{equation}
+    0 \le t_i \le \overline{T}_i,
+    \qquad e^{F,\pm}_k \ge 0,
+    \qquad e^{\tau,\pm}_k \ge 0.
+\end{equation}
+
+\section{Preemptive (Lexicographic) Optimization}
+
+We use a lexicographic (preemptive) sequence of linear programs.
+
+\subsection*{LP-1: Force minimization (highest priority)}
+\begin{align}
+    \min \quad & \sum_k \left( e^{F,+}_k + e^{F,-}_k \right) \\
+    \text{s.t.} \quad & \text{All constraints above.}
+\end{align}
+Let the optimal value be \( Z_F^\star \).
+
+\subsection*{LP-2: Torque tracking/minimization (lower priority)}
+\begin{align}
+    \min \quad & \sum_k \left( e^{\tau,+}_k + e^{\tau,-}_k \right) \\
+    \text{s.t.} \quad &
+    \sum_k \left( e^{F,+}_k + e^{F,-}_k \right) \le Z_F^\star, \\
+    & \text{All previous constraints.}
+\end{align}
+Let the optimal value be \( Z_\tau^\star \).
+
+\subsection*{LP-3: Optional fuel minimization (tie-breaker)}
+\begin{align}
+    \min \quad & \sum_i t_i \\
+    \text{s.t.} \quad &
+    \sum_k \left( e^{F,+}_k + e^{F,-}_k \right) \le Z_F^\star, \\
+    &
+    \sum_k \left( e^{\tau,+}_k + e^{\tau,-}_k \right) \le Z_\tau^\star.
+\end{align}
+
+\section{Matrix Formulation}
+
+Let \( \mathbf{t} \in \mathbb{R}^n \) collect the thrust magnitudes.  
+Define matrices:
+\[
+D = 
+\begin{bmatrix}
+| & & | \\
+\mathbf{d}_1 & \dots & \mathbf{d}_n \\
+| & & |
+\end{bmatrix}, 
+\qquad 
+H =
+\begin{bmatrix}
+| & & | \\
+\mathbf{h}_1 & \dots & \mathbf{h}_n \\
+| & & |
+\end{bmatrix}.
+\]
+
+Then:
+\begin{align}
+    D \mathbf{t} + \mathbf{e}^{F,-} - \mathbf{e}^{F,+} &= \mathbf{0}, \\
+    H \mathbf{t} + \mathbf{e}^{\tau,-} - \mathbf{e}^{\tau,+} &= \boldsymbol{\tau}^{\text{des}}, \\
+    0 \le \mathbf{t} &\le \overline{\mathbf{T}}.
+\end{align}
+
+\section{Optional Modifications}
+
+\begin{itemize}
+    \item \textbf{Force deadband:} replace equality with inequalities
+    \[
+    -F_{\text{max}} \le (D \mathbf{t})_k \le F_{\text{max}}.
+    \]
+    \item \textbf{Torque saturation:} enforce 
+    \(-\tau_{\text{max}} \le (H \mathbf{t})_k \le \tau_{\text{max}}\).
+    \item \textbf{Mixed-integer extension:} include binary variables \( y_i \in \{0,1\} \) and
+    \[
+    t_i^{\min} y_i \le t_i \le \overline{T}_i y_i
+    \]
+    to capture minimum impulse bits or on/off thrusters.
+    \item \textbf{Planar case:} drop unused axes (e.g., \(y,z\)) for a 2D vehicle.
+\end{itemize}
+
+\section{Planar Example (2D)}
+
+For planar motion, control \( F_x, F_y \) (to zero) and \( \tau_z \) (to a desired value):
+\begin{align}
+    \sum_i d_{ix} t_i + e^{Fx,-} - e^{Fx,+} &= 0, \\
+    \sum_i d_{iy} t_i + e^{Fy,-} - e^{Fy,+} &= 0, \\
+    \sum_i h_{iz} t_i + e^{\tau,-} - e^{\tau,+} &= \tau_z^{\text{des}}.
+\end{align}
+
+Primary goal: minimize \( e^{Fx,\pm}, e^{Fy,\pm} \).  
+Secondary goal: minimize \( e^{\tau,\pm} \).
+
+\end{document}

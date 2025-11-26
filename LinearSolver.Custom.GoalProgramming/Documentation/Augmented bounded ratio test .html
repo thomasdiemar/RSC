@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Preemptive Bounded Simplex — P1: Torque; P2: Torque Locked + Pairwise + Thruster UB 0.5</title>
+<style>
+  body { font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; margin:26px; color:#222; }
+  h2 { margin-top:1.6rem; }
+  p.note { color:#444; margin:8px 0 14px; }
+  table { border-collapse:collapse; margin:10px 0 8px; min-width:1040px; }
+  th, td { border:1px solid #ccc; padding:6px 10px; text-align:right; }
+  th:first-child, td:first-child { text-align:left; }
+  .status { text-align:center; }
+  .box   { padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; background:#f8fafc; }
+  .enter { background:#e6f0ff; border-color:#80a7ff; }  /* blue: entering choice */
+  .ratio { background:#fff3b0; border-color:#e0cc7a; }  /* yellow: ART */
+  .obj   { background:#e8f7e8; border-color:#9ad89a; }  /* green: objective */
+  .zrow td, .zrow th { background:#e8f7e8; font-weight:600; }
+  code { background:#f4f6f8; padding:1px 4px; border-radius:4px; }
+  .pivot { color:#0b6623; font-weight:700; }
+</style>
+</head>
+<body>
+
+<h1>Preemptive (Lexicographic) Bounded Simplex</h1>
+
+<p class="note">
+<b>Thrusters:</b> r₁=(2,2,0), r₂=(−2,−2,0), r₃=(0,2,2), r₄=(0,−2,−2). All aᵢ=(100,100,100).<br>
+<b>Torque map</b> (from r×a): 
+<code>B = [[ 200,-200,  0,  0],
+        [-200, 200,200,-200],
+        [   0,   0,-200, 200]]</code><br>
+Hence
+<code>Tx=200(t1−t2)</code>, 
+<code>Ty=−200(t1−t2)+200(t3−t4)</code>, 
+<code>Tz=−200t3+200t4</code>.
+</p>
+
+<hr>
+
+<!-- ========================= PRIORITY 1 ========================= -->
+<h2>Priority 1 — Torque equalities only; basics: Tx,Ty,Tz</h2>
+
+<p class="note">
+<b>Equalities kept inside the simplex:</b><br>
+R₁: <code>Tx − 200 t1 + 200 t2 = 0</code> &nbsp;  
+R₂: <code>Ty + 200 t1 − 200 t2 − 200 t3 + 200 t4 = 0</code> &nbsp;  
+R₃: <code>Tz + 200 t3 − 200 t4 = 0</code>.<br>
+<b>Bounds (P1):</b> <code>0 ≤ t_i ≤ 1</code>.  <b>Objective (min):</b> <code>z = −(t1+t2+t3+t4)</code>.  
+Start at LB: t=0 ⇒ Tx=Ty=Tz=0 (feasible). Take <b>Tx,Ty,Tz</b> as basics.
+</p>
+
+<h3>Step P1-0 — Initial tableau</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Basic</th><th>RHS</th>
+      <th>t1</th><th>t2</th><th>t3</th><th>t4</th>
+      <th>Tx</th><th>Ty</th><th>Tz</th>
+      <th class="status">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>Tx</td><td>0</td><td>−200</td><td>+200</td><td>0</td><td>0</td><td>+1</td><td>0</td><td>0</td><td class="status">B</td></tr>
+    <tr><td>Ty</td><td>0</td><td>+200</td><td>−200</td><td>−200</td><td>+200</td><td>0</td><td>+1</td><td>0</td><td class="status">B</td></tr>
+    <tr><td>Tz</td><td>0</td><td>0</td><td>0</td><td>+200</td><td>−200</td><td>0</td><td>0</td><td>+1</td><td class="status">B</td></tr>
+    <tr class="zrow">
+      <td><b>z (min)</b></td><td><b>0</b></td>
+      <td><b>−1</b></td><td><b>−1</b></td><td><b>−1</b></td><td><b>−1</b></td>
+      <td>0</td><td>0</td><td>0</td><td></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="box enter"><b>Choose entering (blue):</b> All LB nonbasics have r=−1 &lt; 0. Bland ⇒ enter <b>t1</b>.</div>
+
+<div class="box ratio">
+  <b>ART (yellow) — enter t1 ↑ (from LB)</b>
+  <ul>
+    <li>Row Tx: −200 ⇒ UB-hit on Tx: (0−0)/200 = 0</li>
+    <li>Row Ty: +200 ⇒ LB-hit on Ty: (0−0)/200 = 0</li>
+    <li>Opposite bound of t1: 1</li>
+  </ul>
+  Smallest = 0 (row) &lt; 1 ⇒ <span class="pivot">degenerate row pivot</span> (Tx leaves). θ=0.
+</div>
+
+<div class="box obj"><b>Objective (green):</b> θ=0 ⇒ z unchanged (0). Now r(t1)=0 (basic).</div>
+
+<h3>Step P1-1 — After pivot (t1 in; Tx out)</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Basic</th><th>RHS</th>
+      <th>t1</th><th>t2</th><th>t3</th><th>t4</th>
+      <th>Tx</th><th>Ty</th><th>Tz</th>
+      <th class="status">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><b>t1</b></td><td>0</td><td>+1</td><td>−1</td><td>0</td><td>0</td><td>−1/200</td><td>0</td><td>0</td><td class="status">B</td></tr>
+    <tr><td>Ty</td><td>0</td><td>0</td><td>0</td><td>−200</td><td>+200</td><td>+1/200</td><td>+1</td><td>0</td><td class="status">B</td></tr>
+    <tr><td>Tz</td><td>0</td><td>0</td><td>0</td><td>+200</td><td>−200</td><td>0</td><td>0</td><td>+1</td><td class="status">B</td></tr>
+    <tr class="zrow"><td><b>z (min)</b></td><td><b>0</b></td>
+      <td><b>0</b></td><td><b>−1</b></td><td><b>−1</b></td><td><b>−1</b></td>
+      <td>0</td><td>0</td><td>0</td><td></td></tr>
+  </tbody>
+</table>
+
+<div class="box enter"><b>Choose entering (blue):</b> r(t2)=r(t3)=r(t4)=−1. Enter <b>t3</b> next (degenerate), so t3 also becomes basic.</div>
+
+<div class="box ratio">
+  <b>ART (yellow) — enter t3 ↑</b>
+  <ul>
+    <li>Row Ty: −200 ⇒ UB-hit 0</li>
+    <li>Row Tz: +200 ⇒ LB-hit 0</li>
+    <li>Opposite bound of t3: 1</li>
+  </ul>
+  Row wins ⇒ <span class="pivot">degenerate row pivot</span> (Tz leaves). θ=0.
+</div>
+
+<div class="box obj">θ=0 ⇒ z unchanged (0). r(t3)=0.</div>
+
+<h3>Step P1-2 — After pivot (t3 in; Tz out)</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Basic</th><th>RHS</th>
+      <th>t1</th><th>t2</th><th>t3</th><th>t4</th>
+      <th>Tx</th><th>Ty</th><th>Tz</th>
+      <th class="status">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>t1</td><td>0</td><td>+1</td><td>−1</td><td>0</td><td>0</td><td>−1/200</td><td>0</td><td>0</td><td class="status">B</td></tr>
+    <tr><td>Ty</td><td>0</td><td>0</td><td>0</td><td>0</td><td>+200</td><td>+1/200</td><td>+1</td><td>−1</td><td class="status">B</td></tr>
+    <tr><td><b>t3</b></td><td>0</td><td>0</td><td>0</td><td>+1</td><td>−1</td><td>0</td><td>0</td><td>−1/200</td><td class="status">B</td></tr>
+    <tr class="zrow"><td><b>z (min)</b></td><td><b>0</b></td>
+      <td><b>0</b></td><td><b>−1</b></td><td><b>0</b></td><td><b>−1</b></td>
+      <td>0</td><td>0</td><td>0</td><td></td></tr>
+  </tbody>
+</table>
+
+<div class="box enter">LB candidates r&lt;0: <b>t2</b>, <b>t4</b>. Choose <b>t2</b>.</div>
+
+<div class="box ratio">
+  <b>ART (yellow) — enter t2 ↑</b>
+  <ul><li>Row t1: −1 ⇒ UB-hit on t1: (1−0)=1</li><li>Opposite bound of t2: 1</li></ul>
+  Tie ⇒ <span class="pivot">row pivot</span> (t1 leaves to UB). θ=1.
+</div>
+
+<div class="box obj"><b>Objective:</b> old r(t2)=−1, θ=1 ⇒ Δz=−1 ⇒ z: 0 → <b>−1</b>.</div>
+
+<h3>Step P1-3 — After pivot (t2 in; t1→UB)</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Basic</th><th>RHS</th>
+      <th>t1</th><th>t2</th><th>t3</th><th>t4</th>
+      <th>Tx</th><th>Ty</th><th>Tz</th>
+      <th class="status">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><b>t2</b></td><td>1</td><td>−1</td><td>+1</td><td>0</td><td>0</td><td>0</td><td>+1/200</td><td>0</td><td class="status">B</td></tr>
+    <tr><td>Ty</td><td>0</td><td>0</td><td>0</td><td>0</td><td>+200</td><td>0</td><td>+1</td><td>−1</td><td class="status">B</td></tr>
+    <tr><td>t3</td><td>0</td><td>0</td><td>0</td><td>+1</td><td>−1</td><td>0</td><td>0</td><td>−1/200</td><td class="status">B</td></tr>
+    <tr class="zrow"><td><b>z (min)</b></td><td><b>−1</b></td>
+      <td><b>0</b></td><td><b>0</b></td><td><b>0</b></td><td><b>−1</b></td>
+      <td>0</td><td>0</td><td>0</td><td></td></tr>
+  </tbody>
+</table>
+
+<div class="box enter">Remaining LB candidate r&lt;0: <b>t4</b>.</div>
+
+<div class="box ratio">
+  <b>ART (yellow) — enter t4 ↑</b>
+  <ul><li>Row t3: −1 ⇒ UB-hit on t3: (1−0)=1</li><li>Opposite bound of t4: 1</li></ul>
+  Tie ⇒ <span class="pivot">row pivot</span> (t3 leaves to UB). θ=1.
+</div>
+
+<div class="box obj">old r(t4)=−1, θ=1 ⇒ Δz=−1 ⇒ z: −1 → <b>−2</b>.</div>
+
+<h3>Priority-1 wrap-up</h3>
+<p class="note">
+Across steps, **every variable** \(Tx,Ty,Tz,t1,t2,t3,t4\) was basic at some stage.  
+The torque structure implies \(t_1=t_2\) and \(t_3=t_4\); driving throttles to UB=1 would give \(\sum t_i=4\) and \(z=-4\) (we proceed to Priority 2 with torque canceled explicitly).
+</p>
+
+<hr>
+
+<!-- ========================= PRIORITY 2 ========================= -->
+<h2>Priority 2 — Torque canceled; add pairwise constraints; basics include Fx,Fy,Fz; thruster bounds tightened</h2>
+
+<p class="note">
+<b>Torque canceled ⇒ constraints:</b> add  
+C₁: <code>t1 − t2 = 0</code>,  C₂: <code>t3 − t4 = 0</code>.  
+(These are the algebraic form of “zero torque” for this geometry.)  
+We also keep the original torque rows with <b>Tx=Ty=Tz=0</b> **locked** (LB=UB=0), which simply ensures those rows remain satisfied as we move on the \(t_1=t_2,\;t_3=t_4\) subspace.<br>
+<b>Force rows (as basics):</b> since aᵢ=(100,100,100),  
+R₄: <code>Fx − 100Σt = 0</code>, R₅: <code>Fy − 100Σt = 0</code>, R₆: <code>Fz − 100Σt = 0</code>.<br>
+<b>New <u>thruster bounds</u>:</b> <code>0 ≤ t_i ≤ 0.5</code>.  
+<b>Objective (min):</b> <code>z = −(t1+t2+t3+t4)</code>.
+</p>
+
+<h3>Step P2-0 — Initial P2 tableau (choose basics: Tx,Ty,Tz,Fx,Fy,Fz,t1,t3)</h3>
+<p class="note">Start at t=0 (feasible). Take forces as basics and use t1,t3 as the basic variables for the pairwise rows (so we move throttles in coupled pairs).</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Basic</th><th>RHS</th>
+      <th>t1</th><th>t2</th><th>t3</th><th>t4</th>
+      <th>Tx</th><th>Ty</th><th>Tz</th><th>Fx</th><th>Fy</th><th>Fz</th>
+      <th class="status">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- torque locks -->
+    <tr><td>Tx</td><td>0</td><td>−200</td><td>+200</td><td>0</td><td>0</td><td>+1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td class="status">B (locked 0)</td></tr>
+    <tr><td>Ty</td><td>0</td><td>+200</td><td>−200</td><td>−200</td><td>+200</td><td>0</td><td>+1</td><td>0</td><td>0</td><td>0</td><td>0</td><td class="status">B (locked 0)</td></tr>
+    <tr><td>Tz</td><td>0</td><td>0</td><td>0</td><td>+200</td><td>−200</td><td>0</td><td>0</td><td>+1</td><td>0</td><td>0</td><td>0</td><td class="status">B (locked 0)</td></tr>
+    <!-- forces -->
+    <tr><td><b>Fx</b></td><td>0</td><td>−100</td><td>−100</td><td>−100</td><td>−100</td><td>0</td><td>0</td><td>0</td><td>+1</td><td>0</td><td>0</td><td class="status">B</td></tr>
+    <tr><td><b>Fy</b></td><td>0</td><td>−100</td><td>−100</td><td>−100</td><td>−100</td><td>0</td><td>0</td><td>0</td><td>0</td><td>+1</td><td>0</td><td class="status">B</td></tr>
+    <tr><td><b>Fz</b></td><td>0</td><td>−100</td><td>−100</td><td>−100</td><td>−100</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>+1</td><td class="status">B</td></tr>
+    <!-- pairwise constraints (as basic rows using t1,t3) -->
+    <tr><td><b>t1</b> (C₁)</td><td>0</td><td>+1</td><td>−1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td class="status">B (t1=t2)</td></tr>
+    <tr><td><b>t3</b> (C₂)</td><td>0</td><td>0</td><td>0</td><td>+1</td><td>−1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td class="status">B (t3=t4)</td></tr>
+    <tr class="zrow">
+      <td><b>z (min)</b></td><td><b>0</b></td>
+      <!-- Reduced costs reflect coupling: increasing t2 also increases basic t1 by same θ via C₁, so r(t2) = -(1 from t2 + 1 from t1) = -2 -->
+      <td><b>0</b></td><td><b>−2</b></td><td><b>0</b></td><td><b>−2</b></td>
+      <td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="box enter"><b>Choose entering (blue):</b> LB candidates r&lt;0: t2 (r=−2) and t4 (r=−2). Bland ⇒ pick <b>t2</b>.</div>
+
+<div class="box ratio">
+  <b>ART (yellow) — enter t2 ↑ (t1 follows via C₁)</b>
+  <ul>
+    <li><b>Pairwise row C₁</b> (basic t1): t1 increases by the same θ as t2. With bounds 0 ≤ t1 ≤ 0.5, the row limit is θ ≤ 0.5.</li>
+    <li>Other rows (forces) impose no bound; torque locks remain satisfied on this subspace.</li>
+    <li>Opposite bound of t2: u(t2)−t2 = 0.5.</li>
+  </ul>
+  Minimum positive limit is <b>0.5</b> (tie between row C₁ and t2’s opposite bound) ⇒ <span class="pivot">row pivot</span> (C₁ leaves). θ = 0.5.
+</div>
+
+<div class="box obj">
+  <b>Objective update (green):</b> old r(t2)=−2, θ=0.5 ⇒ Δz = (−2)·0.5 = <b>−1</b>.  
+  New partial throttles: t1=t2=0.5, t3=t4=0. ⇒ Σt=1 ⇒ z = <b>−1</b>.
+</div>
+
+<h3>Step P2-1 — After pivot (t2 in; t1 pushed to UB via C₁)</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Basic</th><th>RHS</th>
+      <th>t1</th><th>t2</th><th>t3</th><th>t4</th>
+      <th>Tx</th><th>Ty</th><th>Tz</th><th>Fx</th><th>Fy</th><th>Fz</th>
+      <th class="status">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- Schematic canonical form after pivot: t2 is basic; t1 is at UB 0.5 -->
+    <tr><td><b>t2</b></td><td>0.5</td><td>−1</td><td>+1</td><td>0</td><td>0</td><td>0</td><td>+1/200</td><td>0</td><td>+50</td><td>+50</td><td>+50</td><td class="status">B</td></tr>
+    <tr><td>Tx</td><td>0</td><td>−200</td><td>+200</td><td>0</td><td>0</td><td>+1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td class="status">B (locked 0)</td></tr>
+    <tr><td>Ty</td><td>0</td><td>0</td><td>0</td><td>−200</td><td>+200</td><td>0</td><td>+1</td><td>−1</td><td>0</td><td>0</td><td>0</td><td class="status">B (locked 0)</td></tr>
+    <tr><td>Tz</td><td>0</td><td>0</td><td>0</td><td>+200</td><td>−200</td><td>0</td><td>0</td><td>+1</td><td>0</td><td>0</td><td>0</td><td class="status">B (locked 0)</td></tr>
+    <tr><td>Fx</td><td>100</td><td>−100</td><td>−100</td><td>−100</td><td>−100</td><td>0</td><td>0</td><td>0</td><td>+1</td><td>0</td><td>0</td><td class="status">B</td></tr>
+    <tr><td>Fy</td><td>100</td><td>−100</td><td>−100</td><td>−100</td><td>−100</td><td>0</td><td>0</td><td>0</td><td>0</td><td>+1</td><td>0</td><td class="status">B</td></tr>
+    <tr><td>Fz</td><td>100</td><td>−100</td><td>−100</td><td>−100</td><td>−100</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>+1</td><td class="status">B</td></tr>
+    <tr class="zrow">
+      <!-- Reduced costs: t4 will carry r=-2 due to C₂ coupling when we choose it next -->
+      <td><b>z (min)</b></td><td><b>−1</b></td>
+      <td><b>0</b></td><td><b>0</b></td><td><b>−2</b></td><td><b>−2</b></td>
+      <td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="box enter"><b>Choose entering (blue):</b> r(t4)=−2 (LB). Pick <b>t4</b> (C₂ couples with basic t3).</div>
+
+<div class="box ratio">
+  <b>ART (yellow) — enter t4 ↑ (t3 follows via C₂)</b>
+  <ul>
+    <li>C₂ (basic t3): t3 increases by θ with bounds 0 ≤ t3 ≤ 0.5 ⇒ θ ≤ 0.5.</li>
+    <li>Opposite bound of t4: also 0.5.</li>
+  </ul>
+  Tie at 0.5 ⇒ <span class="pivot">row pivot</span> (C₂ leaves). θ = 0.5.
+</div>
+
+<div class="box obj">
+  <b>Objective update (green):</b> old r(t4)=−2, θ=0.5 ⇒ Δz = (−2)·0.5 = <b>−1</b>.  
+  New throttles: t1=t2=0.5 and t3=t4=0.5 ⇒ Σt=2 ⇒ z = <b>−2</b>.
+</div>
+
+<h3>Step P2-2 — Final tableau (P2 optimum)</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Basic</th><th>RHS</th>
+      <th>t1</th><th>t2</th><th>t3</th><th>t4</th>
+      <th>Tx</th><th>Ty</th><th>Tz</th><th>Fx</th><th>Fy</th><th>Fz</th>
+      <th class="status">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- t2 and t4 can be shown as basics; t1,t3 at UB -->
+    <tr><td>t2</td><td>0.5</td><td>−1</td><td>+1</td><td>0</td><td>0</td><td>0</td><td>+1/200</td><td>0</td><td>+50</td><td>+50</td><td>+50</td><td class="status">B</td></tr>
+    <tr><td><b>t4</b></td><td>0.5</td><td>0</td><td>0</td><td>−1</td><td>+1</td><td>0</td><td>0</td><td>+1/200</td><td>+50</td><td>+50</td><td>+50</td><td class="status">B</td></tr>
+    <tr><td>Tx</td><td>0</td><td>−200</td><td>+200</td><td>0</td><td>0</td><td>+1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td class="status">B (locked 0)</td></tr>
+    <tr><td>Ty</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>+1</td><td>0</td><td>0</td><td>0</td><td>0</td><td class="status">B (locked 0)</td></tr>
+    <tr><td>Tz</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>+1</td><td>0</td><td>0</td><td>0</td><td class="status">B (locked 0)</td></tr>
+    <tr><td>Fx</td><td>200</td><td>−100</td><td>−100</td><td>−100</td><td>−100</td><td>0</td><td>0</td><td>0</td><td>+1</td><td>0</td><td>0</td><td class="status">B</td></tr>
+    <tr><td>Fy</td><td>200</td><td>−100</td><td>−100</td><td>−100</td><td>−100</td><td>0</td><td>0</td><td>0</td><td>0</td><td>+1</td><td>0</td><td class="status">B</td></tr>
+    <tr><td>Fz</td><td>200</td><td>−100</td><td>−100</td><td>−100</td><td>−100</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>+1</td><td class="status">B</td></tr>
+    <tr class="zrow">
+      <td><b>z (min)</b></td><td><b>−2</b></td>
+      <td><b>0</b></td><td><b>0</b></td><td><b>0</b></td><td><b>0</b></td>
+      <td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="box obj">
+  <b>P2 Optimum (green):</b> With thruster bounds \(0\le t_i\le 0.5\) and pairwise constraints, the best is  
+  \(t_1=t_2=0.5,\; t_3=t_4=0.5\) ⇒ \(\sum t_i=2\) ⇒ \(z^\*=-2\).  
+  Forces (as basics) show \(Fx=Fy=Fz=100\cdot 2=200\). No LB nonbasic has r&lt;0 and no UB nonbasic has r&gt;0 ⇒ optimal.
+</div>
+
+<hr>
+
+<h2>How the objective & net-evaluation row is computed (minimization)</h2>
+<ul class="note">
+  <li>The objective row lists the current z value (RHS) and **reduced costs** for nonbasics.  
+      For minimization, an **LB** nonbasic is improving if <b>r &lt; 0</b> (a **UB** nonbasic if <b>r &gt; 0</b>).</li>
+  <li>When a variable enters, its reduced cost becomes **0** after the pivot.</li>
+  <li>The change in objective for step size θ is  
+      <code>Δz = r_enter (before pivot) × θ</code>.  
+      In P2 we had r(t2)=−2 due to the pairwise constraint C₁ making t1 follow t2, so θ=0.5 produced Δz=−1;  
+      similarly r(t4)=−2 with C₂, another Δz=−1.</li>
+</ul>
+
+<h2>How the Augmented Ratio Test works (bounded feature)</h2>
+<ul class="note">
+  <li>For the chosen entering variable, compute all **row limits** (each basic hitting LB/UB) and the entering variable’s **opposite-bound** distance.</li>
+  <li>The **smallest positive** among them wins.  
+      If the opposite bound is strictly smallest → **preemptive bound hit** (no pivot).  
+      If a row wins or ties → **row pivot** (as in our P2 steps where the pairwise basic hit UB=0.5).</li>
+</ul>
+
+</body>
+</html>

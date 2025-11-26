@@ -28,3 +28,25 @@
 ## Security & Configuration Tips
 - Target .NET Framework 4.7.2; avoid adding new dependencies.
 - Custom solver must not depend on MSF; MSF solver should guard against reading unsolved decisions for progress snapshots.
+
+## Project Restrictions 
+Following projects are restricted:
+- LinearSolver
+- LinearSolver.Custom
+- LinearSolver.Custom.GoalProgramming
+
+Restricted to:
+System (basic types, math, text, collections)
+System.Collections.Generic (lists, dictionaries, etc.)
+System.Text (for StringBuilder, etc.)
+System.Linq (for LINQ operations)
+
+## Project Rules
+Following projects 
+- LinearSolver
+- LinearSolver.Custom
+- LinearSolver.Custom.GoalProgramming
+must not use MFS or LinearSolver.MSF project
+
+## LinearSolver.Custom.GoalProgramming
+Must be implemented with Premptive Bounded Goal programming using Premptive Bounded Goal simplex and tablau.

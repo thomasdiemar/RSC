@@ -1,0 +1,201 @@
+\documentclass[12pt]{article}
+
+% XeLaTeX fonts
+\usepackage{fontspec}
+\setmainfont{Latin Modern Roman}
+
+\usepackage{amsmath, amssymb, amsfonts, geometry, array, booktabs}
+\geometry{margin=1in}
+
+% LB / UB / B labels
+\newcommand{\LB}{\textsf{LB}}
+\newcommand{\UB}{\textsf{UB}}
+\newcommand{\B}{\textsf{B}}
+
+\begin{document}
+
+\section*{Bounded Preemptive Simplex with Preemptive (Priority) Goal Programming}
+
+\subsection*{Thruster Geometry}
+
+Two thrusters:
+\[
+r_1=(0,2,0),\quad a_1=(100,0,0),\qquad
+r_2=(0,-4,0),\quad a_2=(100,0,0).
+\]
+
+Force map $F=A\,t$ and torque map $T=B\,t$:
+\[
+A=
+\begin{bmatrix}
+100 & 100\\
+0 & 0\\
+0 & 0
+\end{bmatrix},
+\qquad
+B=
+\begin{bmatrix}
+0 & 0\\
+0 & 0\\
+-200 & 400
+\end{bmatrix}.
+\]
+
+Thus, for $t=(t_1,t_2)^T$,
+\[
+F=
+\begin{bmatrix}
+100(t_1+t_2)\\[2pt]
+0\\[2pt]
+0
+\end{bmatrix},
+\quad
+T=
+\begin{bmatrix}
+0\\[2pt]
+0\\[2pt]
+-200\,t_1+400\,t_2
+\end{bmatrix}.
+\]
+
+Throttle bounds:
+\[
+0\le t_1\le 1,\qquad 0\le t_2\le 1.
+\]
+
+\section*{Stage $P_1$: Minimize Torque}
+
+We minimize the L1 norm of torque. Since only $T_z$ appears, introduce deviational variables $\tau^+,\tau^- \ge 0$:
+
+\[
+-200\,t_1 + 400\,t_2 + \tau^- - \tau^+ = 0,
+\qquad
+\min z_1 = \tau^+ + \tau^- .
+\]
+
+We keep variables with bounds directly in the simplex via LB/UB status tags.
+
+\subsection*{Initial $P_1$ Tableau}
+
+Make $\tau^+$ basic:
+
+\[
+\tau^+ = -200\,t_1 + 400\,t_2 + \tau^-.
+\]
+
+% ------------ FIXED COLUMN SPEC: rrrr (4 r's) ------------
+\[
+\begin{array}{c|r|rrrr|c}
+\text{Basic} & \text{RHS} & t_1 & t_2 & \tau^- & \tau^+ & \text{Status}\\
+\hline
+\tau^+ & 0 & -200 & +400 & +1 & 1 & \B\\
+\hline
+z_1 & 0 & \mathbf{-200} & \mathbf{+400} & \mathbf{+2} & 0 & 
+\end{array}
+\]
+
+Status at start:
+\[
+t_1:\ \LB\ (0\le t_1\le 1),\qquad
+t_2:\ \LB\ (0\le t_2\le 1),\qquad
+\tau^-:\ \LB.
+\]
+
+Since $r_{t_1}=-200<0$, $t_1$ may enter (increase) from LB for minimization.
+
+\subsection*{Degenerate Pivot in $P_1$}
+
+Pivot on $t_1$ entering, $\tau^+$ leaving:
+
+\[
+t_1 = 2\,t_2 + \tfrac{1}{200}\tau^- - \tfrac{1}{200}\tau^+.
+\]
+
+% ------------ FIXED COLUMN SPEC HERE TOO ------------
+\[
+\begin{array}{c|r|rrrr|c}
+\text{Basic} & \text{RHS} & t_1 & t_2 & \tau^- & \tau^+ & \text{Status}\\
+\hline
+t_1 & 0 & 1 & +2 & +\tfrac{1}{200} & -\tfrac{1}{200} & \B\\
+\hline
+z_1 & 0 & 0 & \mathbf{0} & \mathbf{+1} & \mathbf{+1} & 
+\end{array}
+\]
+
+This means $z_1=0$ is achieved whenever $\tau^\pm=0$ and
+\[
+\boxed{t_1 = 2\,t_2}.
+\]
+
+Thus $Z_1^\star=0$ (exact torque cancellation). We \emph{lock} this relation for $P_2$.
+
+\section*{Stage $P_2$: Maximize Forward Force in $+x$}
+
+\[
+\max z_2 = 100(t_1+t_2)\qquad
+\text{s.t. } t_1=2t_2,\ 0\le t_1,t_2\le 1.
+\]
+
+Substitute $t_1=2t_2$:
+\[
+z_2 = 300\,t_2.
+\]
+
+Bounds require $2t_2\le 1$ and $0\le t_2\le 1$, so $0\le t_2\le 0.5$.
+
+Treat $t_1$ as basic; $t_2$ as nonbasic.
+
+\subsection*{$P_2$ Tableau A (start)}
+
+\[
+\begin{array}{c|c|c}
+\text{Variable} & \text{Value} & \text{Status}\\
+\hline
+t_2 & 0.0 & \LB\ ([0,0.5])\\
+t_1 & 0.0 & \B\ (t_1=2t_2)\\
+z_2 & \ & \text{reduced cost of } t_2:\ \mathbf{+300}
+\end{array}
+\]
+
+Since $r_{t_2}>0$ and $t_2$ is at \LB, we increase $t_2$.
+
+\subsection*{Bounded Ratio (Preemptive) in $P_2$}
+
+Equality $t_1=2t_2$ does not limit $t_2$, but $t_1\le 1$ gives
+\[
+2t_2\le 1 \Rightarrow t_2\le 0.5.
+\]
+
+Opposite-bound distance: $0.5-0=0.5$.
+
+Thus: \emph{preemptive bound hit} (no pivot).
+
+\subsection*{$P_2$ Tableau B (after UB hit)}
+
+\[
+\begin{array}{c|c|c}
+\text{Variable} & \text{Value} & \text{Status}\\
+\hline
+t_2 & 0.5 & \UB\ ([0,0.5])\\
+t_1 & 1.0 & \B\ (t_1=2t_2)\\
+z_2 & 150 &
+\end{array}
+\]
+
+\subsection*{Optimality}
+
+A nonbasic at \UB\ can only improve a maximization by \emph{decreasing} if $r_j<0$.
+Here $r_{t_2}=+300>0$, so decreasing $t_2$ lowers $z_2$.
+No other candidates.
+
+\[
+\boxed{\text{Optimal for $P_2$ while $P_1$ remains locked}.}
+\]
+
+\section*{Final Solution}
+
+\[
+\boxed{t_1=1.0,\quad t_2=0.5,\quad F=(150,0,0),\quad T=(0,0,0).}
+\]
+
+\end{document}

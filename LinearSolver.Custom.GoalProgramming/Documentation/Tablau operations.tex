@@ -1,0 +1,219 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{array,booktabs,multirow}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{bm}
+
+\setlist[itemize]{topsep=2pt,itemsep=2pt}
+\setlist[enumerate]{topsep=4pt,itemsep=4pt}
+
+\newcommand{\LB}{\mathrm{LB}}
+\newcommand{\UB}{\mathrm{UB}}
+\newcommand{\B}{\mathrm{B}}
+\newcommand{\ve}{x_e}
+\newcommand{\xb}{\bm{x}_B}
+\newcommand{\Be}{d_e}
+\newcommand{\rc}{r}
+\newcommand{\A}{A}
+\newcommand{\Bmat}{B}
+\newcommand{\uvec}{\bm{u}}
+\newcommand{\lvec}{\bm{\ell}}
+\newcommand{\thet}{\theta}
+\newcommand{\thb}{\theta_{\mathrm{bound}}}
+
+\begin{document}
+
+\begin{center}
+{\LARGE Bounded Preemptive Simplex (Lexicographic Goal Programming Core)}\\[2mm]
+{\large How bounds are kept in the tableau, how LB/UB/B statuses work, how entering is chosen, and how bound hits (no pivot) differ from row pivots.}
+\end{center}
+
+\section*{1.\;Problem structure (generic)}
+
+Variables $x_1,\dots,x_n$ have true physical bounds
+\[
+\ell_i \;\le\; x_i \;\le\; u_i \qquad (i=1,\dots,n).
+\]
+If a variable is nonbasic, it sits exactly at one bound:
+\[
+x_i=\ell_i\;(\LB)\quad\text{or}\quad x_i=u_i\;(\UB).
+\]
+If a variable is basic ($\B$), it can lie strictly between its bounds:
+\[
+\ell_i < x_i < u_i.
+\]
+Bounds are kept \emph{inside} the simplex (no substitutions like $x=\ell+\tilde{x}$).
+
+\section*{2.\;Generic bounded simplex tableau}
+
+A canonical tableau (illustrative):
+\[
+\begin{array}{c|c|rrrr|c}
+\text{Basic} & \text{RHS} & x_1 & x_2 & x_3 & x_4 & \text{Status} \\
+\hline
+x_3 & 2 & +1 & -2 & 1 & 0 & \B \\
+x_4 & 1 & 0 & +1 & -1 & 1 & \B \\
+\hline
+z\ (\max) & 7 & +3 & -1 & 0 & 0 & 
+\end{array}
+\]
+Separately store nonbasic variables and their bound statuses:
+\[
+\begin{array}{c|c|c}
+\text{Variable} & \text{Value} & \text{Status} \\
+\hline
+x_1 & x_1=\ell_1 & \LB \\
+x_2 & x_2=u_2 & \UB
+\end{array}
+\]
+In the bounded simplex, nonbasics sit at their \emph{real} bounds (not at $0$).
+
+\section*{3.\;Reduced-cost eligibility (choosing the entering variable)}
+
+For a \emph{maximization}:
+\[
+\begin{aligned}
+&\text{Nonbasic at } \LB: && \text{may enter by increasing if } r_j>0.\\
+&\text{Nonbasic at } \UB: && \text{may enter by decreasing if } r_j<0.
+\end{aligned}
+\]
+For a \emph{minimization}, flip signs:
+\[
+\begin{aligned}
+&\text{Nonbasic at } \LB: && \text{may enter if } r_j<0.\\
+&\text{Nonbasic at } \UB: && \text{may enter if } r_j>0.
+\end{aligned}
+\]
+If no nonbasic satisfies this, the current stage is optimal.
+
+\section*{4.\;Augmented ratio test (bounded feature)}
+
+Let $x_e$ be eligible. Define the attempted move direction:
+\[
+d_e=\begin{cases}
++1, & \text{if } x_e \text{ is at } \LB \text{ (increase)},\\
+-1, & \text{if } x_e \text{ is at } \UB \text{ (decrease)}.
+\end{cases}
+\]
+Let $\bm{d}=B^{-1}A_{:e}$ be the basic-direction column for $x_e$.
+Movement with step $\Delta$ is
+\[
+\Delta x_e=d_e\,\Delta, \qquad \Delta \bm{x}_B=-\bm{d}\,\Delta.
+\]
+
+Two limits can stop us:
+
+\paragraph{(A) Row limit: a basic hits LB or UB.}
+For each basic $x_{B_i}$ with direction $d_i$:
+\[
+\theta_i=
+\begin{cases}
+\dfrac{x_{B_i}-\ell_{B_i}}{d_i}, & \text{if } d_e=+1,\ d_i>0, \\[1.1ex]
+\dfrac{u_{B_i}-x_{B_i}}{-d_i}, & \text{if } d_e=+1,\ d_i<0.
+\end{cases}
+\]
+If $d_e=-1$, LB/UB swap.
+
+\paragraph{(B) Bound limit of the entering variable.}
+\[
+\theta_{\text{bound}}=
+\begin{cases}
+u_e - x_e, & \text{if } d_e=+1,\\
+x_e - \ell_e, & \text{if } d_e=-1.
+\end{cases}
+\]
+
+\paragraph{Step size.}
+\[
+\theta=\min\{\theta_{\text{bound}},\ \min_i \theta_i\}.
+\]
+
+\section*{5.\;Two possible outcomes}
+
+\subsection*{(1) Strict bound hit of entering ($\theta=\theta_{\text{bound}}$)}
+\begin{itemize}
+\item \textbf{Preemptive bound hit:} no pivot.
+\item Move $x_e$ to the opposite bound, update basics: $\Delta\bm{x}_B=-\bm{d}\,\theta$.
+\item $x_e$ stays nonbasic, flips $\LB \leftrightarrow \UB$.
+\end{itemize}
+
+\subsection*{(2) Row pivot ($\theta=\theta_i$)}
+\begin{itemize}
+\item Perform a Gauss--Jordan pivot.
+\item Entering becomes basic; leaving hits its bound and becomes $\LB$ or $\UB$.
+\end{itemize}
+
+\section*{6.\;Example iteration}
+
+Initial:
+\[
+\begin{array}{c|c|c}
+\text{var} & \text{value} & \text{status}\\\hline
+x_1 & 0 & \LB\\
+x_2 & 5 & \UB\\
+x_3 & 2 & \B\\
+x_4 & 1 & \B
+\end{array}
+\]
+
+Maximization reduced costs:
+\[
+r_1=+3>0 \Rightarrow x_1\ \text{eligible from }\LB,\qquad
+r_2=-1<0 \Rightarrow x_2\ \text{eligible from }\UB.
+\]
+Pick $x_1$. Suppose $\theta_{\text{bound}}=10$ and row $x_3$ reaches LB at $\theta=2$. Since $2<10$, pivot.
+
+\[
+\begin{array}{c|c|rrrr|c}
+\text{Basic} & \text{RHS} & x_1 & x_2 & x_3 & x_4 & \text{Status} \\
+\hline
+x_1 & 2 & 1 & -2 & 1 & 0 & \B \\
+x_4 & 1 & 0 & +1 & -1 & 1 & \B \\
+\hline
+z & 13 & 0 & +5 & -3 & 0 &
+\end{array}
+\]
+Leaving $x_3$ hits LB, so $x_3\to \LB$.
+
+If instead $\theta_{\text{bound}}=1<3$, then preemptive bound hit. $x_1$ moves to $u_1$, no pivot, status flips to $\UB$.
+
+\section*{7.\;Degeneracy}
+
+If $\theta=0$:
+\begin{itemize}
+\item If row-limited: pivot.
+\item If bound-limited: flip $\LB \leftrightarrow \UB$.
+\item Use Bland's rule to avoid cycling.
+\end{itemize}
+
+\section*{8.\;Difference from ordinary simplex}
+
+\[
+\begin{array}{l|l}
+\text{Standard simplex} & \text{Bounded preemptive simplex} \\\hline
+\text{Nonbasics at } 0 & \text{Nonbasics at LB/UB}\\
+\text{No opposite-bound hits} & \text{LB}\!\to\!\text{UB or UB}\!\to\!\text{LB possible}\\
+\text{Movement ends in pivot} & \text{May end in bound hit with no pivot}\\
+\text{Needs variable substitution for bounds} & \text{Bounds handled directly}
+\end{array}
+\]
+
+\section*{9.\;Summary}
+
+\[
+\begin{array}{l|l|l|l}
+\text{Event} & \text{Stops movement?} & \text{Action} & \text{Status change}\\\hline
+\text{Bound hit (strict)} & \text{Opposite bound first} & \text{No pivot} & \LB \leftrightarrow \UB\\
+\text{Row pivot} & \text{Basic hits bound first (or tie)} & \text{Pivot} & \text{Enter }\to \B,\ \text{leave }\to \LB/\UB\\
+\text{Degenerate }(\theta=0) & \text{Row or bound} & \text{Pivot or flip}; \text{Bland's} & \text{As above}\\
+\text{No eligible } r_j & \text{---} & \text{Optimal} & \text{---}
+\end{array}
+\]
+
+\vspace{1ex}
+\noindent\emph{This is the mechanism used internally by lexicographic (preemptive) goal programming.}
+
+\end{document}

@@ -70,16 +70,10 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 }
 
                 bool isSoft = goal.Tolerance >= Fraction.MaxValue - Fraction.Epsilon;
+                var rhs = (double)goal.RightHandSide;
+
                 if (isSoft)
                 {
-                    continue;
-                }
-
-                var rhs = (double)goal.RightHandSide;
-                if (goal.Sense == GoalSense.Equal)
-                {
-                    constraintRows.Add(r);
-                    constraintValues.Add(rhs);
                     continue;
                 }
 
@@ -87,16 +81,18 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 {
                     constraintRows.Add(r);
                     constraintValues.Add(0);
+                    continue;
                 }
-                else
-                {
-                    targetRows.Add(r);
-                }
+
+                // Non-zero hard row becomes the current objective target.
+                targetRows.Add(r);
             }
 
             var coefficients = ExtractCoefficients(tableau);
             var solution = new double[tableau.ColumnCount];
             var objectiveValue = new Fraction(0);
+            var originalConstraintRows = new List<int>(constraintRows);
+            var originalConstraintValues = new List<double>(constraintValues);
 
             if (targetRows.Count == 0 && constraintRows.Count == 0)
             {
@@ -104,25 +100,47 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 return new SimplexResult(SimplexStatus.Optimal, objectiveValue, diagnostics, tableau.ColumnHeaders.Select(v => v.Clone()).ToList());
             }
 
-            if (targetRows.Count > 0)
+            int targetRow = targetRows.Count > 0 ? targetRows[0] : -1;
+            int targetSign = 1;
+            if (targetRow >= 0 && allRightHandSides[targetRow] < 0)
             {
-                foreach (var targetRow in targetRows)
+                targetSign = -1;
+            }
+
+            // Remove target row from constraint list if present.
+            if (targetRow >= 0)
+            {
+                int idx = constraintRows.IndexOf(targetRow);
+                if (idx >= 0)
                 {
-                    constraintRows.Add(targetRow);
-                    constraintValues.Add(allRightHandSides[targetRow]);
+                    constraintRows.RemoveAt(idx);
+                    constraintValues.RemoveAt(idx);
                 }
             }
 
-            if (constraintRows.Count > 0)
+            var feasible = SolveEnumerating(coefficients, constraintRows, constraintValues, targetRow, targetSign, allRightHandSides, allTolerances);
+            if (feasible == null)
             {
-                var feasible = SolveEnumerating(coefficients, constraintRows, constraintValues, targetRow: -1, targetSign: 0, allRightHandSides, allTolerances);
-                if (feasible == null)
-                {
-                    return CreateResult(SimplexStatus.GoalViolation, objectiveValue, diagnostics, tableau);
-                }
+                return CreateResult(SimplexStatus.GoalViolation, objectiveValue, diagnostics, tableau);
+            }
 
-                solution = feasible;
-                objectiveValue = new Fraction(0);
+            solution = feasible;
+            if (targetRow >= 0)
+            {
+                var achieved = EvaluateRow(coefficients, targetRow, solution);
+                objectiveValue = ToFraction(targetSign * achieved);
+            }
+
+            // Phase 2: lock achieved target and minimise soft penalties/thrust.
+            if (targetRow >= 0)
+            {
+                var lockedConstraints = new List<int>(originalConstraintRows) { targetRow };
+                var lockedValues = new List<double>(originalConstraintValues) { (double)objectiveValue / targetSign };
+                var refined = SolveEnumerating(coefficients, lockedConstraints, lockedValues, targetRow: -1, targetSign: 1, allRightHandSides: allRightHandSides, allTolerances: allTolerances);
+                if (refined != null)
+                {
+                    solution = refined;
+                }
             }
 
             for (int i = 0; i < tableau.ColumnCount; i++)
@@ -388,36 +406,59 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             double[] allTolerances)
         {
             int cols = coefficients.GetLength(1);
-            var independentRows = GetIndependentRows(coefficients, constraintRows);
-            int constraintCount = independentRows.Count;
-            var constraintValueMap = new Dictionary<int, double>();
-            for (int i = 0; i < constraintRows.Count; i++)
+            var softRows = GetSoftRows(allTolerances);
+            var solvingRows = GetIndependentRows(coefficients, constraintRows, 1e-9);
+            var solvingValues = new List<double>(solvingRows.Count);
+            foreach (var row in solvingRows)
             {
-                constraintValueMap[constraintRows[i]] = constraintValues[i];
+                int originalIndex = constraintRows.IndexOf(row);
+                solvingValues.Add(originalIndex >= 0 ? constraintValues[originalIndex] : 0);
             }
-            var independentValues = independentRows.Select(row => constraintValueMap[row]).ToArray();
+
+            int eqCount = solvingRows.Count;
+            const double eps = 1e-9;
+
+            if (eqCount > cols)
+            {
+                return null;
+            }
+
             double bestObjective = double.NegativeInfinity;
             double bestPenalty = double.PositiveInfinity;
             double bestThrust = double.PositiveInfinity;
             double[] best = null;
-            const double eps = 1e-6;
 
-            if (constraintCount == 0)
+            // No hard constraints: brute-force 0/1 corners.
+            if (eqCount == 0)
             {
-                foreach (var assignment in EnumerateBinary(cols))
+                int maxMask = 1 << cols;
+                var candidate = new double[cols];
+                for (int mask = 0; mask < maxMask; mask++)
                 {
-                    var candidate = assignment.Select(v => v ? 1.0 : 0.0).ToArray();
+                    for (int c = 0; c < cols; c++)
+                    {
+                        candidate[c] = ((mask >> c) & 1) == 1 ? 1.0 : 0.0;
+                    }
+
                     double objective = targetRow >= 0 ? EvaluateRow(coefficients, targetRow, candidate) * targetSign : 0;
-                    double penalty = ComputePenalty(coefficients, candidate, targetRow, allRightHandSides, allTolerances);
-                    double thrustSum = candidate.Sum();
-                    if (objective > bestObjective + 1e-9 ||
-                        (Math.Abs(objective - bestObjective) <= 1e-9 && penalty < bestPenalty - 1e-9) ||
-                        (Math.Abs(objective - bestObjective) <= 1e-9 && Math.Abs(penalty - bestPenalty) <= 1e-9 && thrustSum < bestThrust - 1e-9))
+                    double penalty = 0;
+                    if (softRows != null && softRows.Count > 0)
+                    {
+                        foreach (var r in softRows)
+                        {
+                            penalty += Math.Abs(EvaluateRow(coefficients, r, candidate));
+                        }
+                    }
+
+                    double thrust = candidate.Sum();
+                    if (objective > bestObjective + eps ||
+                        (Math.Abs(objective - bestObjective) <= eps && penalty < bestPenalty - eps) ||
+                        (Math.Abs(objective - bestObjective) <= eps && Math.Abs(penalty - bestPenalty) <= eps && thrust < bestThrust - eps))
                     {
                         bestObjective = objective;
                         bestPenalty = penalty;
-                        bestThrust = thrustSum;
-                        best = candidate;
+                        bestThrust = thrust;
+                        best = (double[])candidate.Clone();
                     }
                 }
 
@@ -425,49 +466,46 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             }
 
             var allIndices = Enumerable.Range(0, cols).ToArray();
-            foreach (var basis in Choose(allIndices, constraintCount))
+            foreach (var basis in Choose(allIndices, eqCount))
             {
                 var basisSet = new HashSet<int>(basis);
                 var nonBasis = allIndices.Where(i => !basisSet.Contains(i)).ToArray();
+                int nonCount = nonBasis.Length;
+                int maxMask = 1 << nonCount;
 
-                foreach (var assignment in EnumerateBinary(nonBasis.Length))
+                for (int mask = 0; mask < maxMask; mask++)
                 {
-                    var rhs = new double[constraintCount];
-                    for (int i = 0; i < constraintCount; i++)
+                    var candidate = new double[cols];
+                    for (int i = 0; i < nonCount; i++)
+                    {
+                        candidate[nonBasis[i]] = ((mask >> i) & 1) == 1 ? 1.0 : 0.0;
+                    }
+
+                    var matrix = new double[eqCount, eqCount];
+                    var rhs = new double[eqCount];
+                    for (int r = 0; r < eqCount; r++)
                     {
                         double sum = 0;
-                        for (int j = 0; j < nonBasis.Length; j++)
+                        for (int i = 0; i < nonCount; i++)
                         {
-                            double value = assignment[j] ? 1.0 : 0.0;
-                            sum += coefficients[independentRows[i], nonBasis[j]] * value;
+                            sum += coefficients[solvingRows[r], nonBasis[i]] * candidate[nonBasis[i]];
                         }
 
-                        rhs[i] = independentValues[i] - sum;
-                    }
-
-                    var matrix = new double[constraintCount, constraintCount];
-                    for (int i = 0; i < constraintCount; i++)
-                    {
-                        for (int j = 0; j < constraintCount; j++)
+                        rhs[r] = solvingValues[r] - sum;
+                        for (int c = 0; c < eqCount; c++)
                         {
-                            matrix[i, j] = coefficients[independentRows[i], basis[j]];
+                            matrix[r, c] = coefficients[solvingRows[r], basis[c]];
                         }
                     }
 
-                    var solved = SolveLinearSystem(matrix, rhs);
+                    var solved = SolveLinearSystem(matrix, rhs, eps);
                     if (solved == null)
                     {
                         continue;
                     }
 
-                    var candidate = new double[cols];
-                    for (int i = 0; i < nonBasis.Length; i++)
-                    {
-                        candidate[nonBasis[i]] = assignment[i] ? 1.0 : 0.0;
-                    }
-
                     bool inBounds = true;
-                    for (int i = 0; i < constraintCount; i++)
+                    for (int i = 0; i < eqCount; i++)
                     {
                         double value = solved[i];
                         if (value < -eps || value > 1.0 + eps)
@@ -484,21 +522,40 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                         continue;
                     }
 
-                    if (!ConstraintsSatisfied(coefficients, constraintRows, constraintValues, candidate, eps))
+                    bool constraintsOk = true;
+                    for (int r = 0; r < constraintRows.Count; r++)
+                    {
+                        double actual = EvaluateRow(coefficients, constraintRows[r], candidate);
+                        if (Math.Abs(actual - constraintValues[r]) > 1e-6)
+                        {
+                            constraintsOk = false;
+                            break;
+                        }
+                    }
+
+                    if (!constraintsOk)
                     {
                         continue;
                     }
 
                     double objective = targetRow >= 0 ? EvaluateRow(coefficients, targetRow, candidate) * targetSign : 0;
-                    double penalty = ComputePenalty(coefficients, candidate, targetRow, allRightHandSides, allTolerances);
-                    double thrustSum = candidate.Sum();
-                    if (objective > bestObjective + 1e-9 ||
-                        (Math.Abs(objective - bestObjective) <= 1e-9 && penalty < bestPenalty - 1e-9) ||
-                        (Math.Abs(objective - bestObjective) <= 1e-9 && Math.Abs(penalty - bestPenalty) <= 1e-9 && thrustSum < bestThrust - 1e-9))
+                    double penalty = 0;
+                    if (softRows != null && softRows.Count > 0)
+                    {
+                        foreach (var r in softRows)
+                        {
+                            penalty += Math.Abs(EvaluateRow(coefficients, r, candidate));
+                        }
+                    }
+
+                    double thrust = candidate.Sum();
+                    if (objective > bestObjective + eps ||
+                        (Math.Abs(objective - bestObjective) <= eps && penalty < bestPenalty - eps) ||
+                        (Math.Abs(objective - bestObjective) <= eps && Math.Abs(penalty - bestPenalty) <= eps && thrust < bestThrust - eps))
                     {
                         bestObjective = objective;
                         bestPenalty = penalty;
-                        bestThrust = thrustSum;
+                        bestThrust = thrust;
                         best = candidate;
                     }
                 }
@@ -507,23 +564,111 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             return best;
         }
 
-        private static bool ConstraintsSatisfied(
-            double[,] coefficients,
-            IList<int> constraintRows,
-            IList<double> constraintValues,
-            double[] candidate,
-            double eps)
+        private static double[] SolveLinearSystem(double[,] matrix, double[] rhs, double eps)
         {
-            for (int i = 0; i < constraintRows.Count; i++)
+            int n = rhs.Length;
+            var augmented = new double[n, n + 1];
+            for (int i = 0; i < n; i++)
             {
-                double value = EvaluateRow(coefficients, constraintRows[i], candidate);
-                if (Math.Abs(value - constraintValues[i]) > eps)
+                for (int j = 0; j < n; j++)
                 {
-                    return false;
+                    augmented[i, j] = matrix[i, j];
+                }
+                augmented[i, n] = rhs[i];
+            }
+
+            int pivotRow = 0;
+            for (int col = 0; col < n && pivotRow < n; col++)
+            {
+                int bestRow = pivotRow;
+                double best = Math.Abs(augmented[bestRow, col]);
+                for (int r = pivotRow + 1; r < n; r++)
+                {
+                    double val = Math.Abs(augmented[r, col]);
+                    if (val > best)
+                    {
+                        best = val;
+                        bestRow = r;
+                    }
+                }
+
+                if (best < eps)
+                {
+                    continue;
+                }
+
+                if (bestRow != pivotRow)
+                {
+                    SwapRows(augmented, bestRow, pivotRow);
+                }
+
+                double pivot = augmented[pivotRow, col];
+                for (int c = col; c <= n; c++)
+                {
+                    augmented[pivotRow, c] /= pivot;
+                }
+
+                for (int r = 0; r < n; r++)
+                {
+                    if (r == pivotRow)
+                    {
+                        continue;
+                    }
+
+                    double factor = augmented[r, col];
+                    if (Math.Abs(factor) < eps)
+                    {
+                        continue;
+                    }
+
+                    for (int c = col; c <= n; c++)
+                    {
+                        augmented[r, c] -= factor * augmented[pivotRow, c];
+                    }
+                }
+
+                pivotRow++;
+            }
+
+            // Detect inconsistency.
+            for (int r = 0; r < n; r++)
+            {
+                bool allZero = true;
+                for (int c = 0; c < n; c++)
+                {
+                    if (Math.Abs(augmented[r, c]) > eps)
+                    {
+                        allZero = false;
+                        break;
+                    }
+                }
+
+                if (allZero && Math.Abs(augmented[r, n]) > eps)
+                {
+                    return null;
                 }
             }
 
-            return true;
+            var solution = new double[n];
+            for (int r = 0; r < n; r++)
+            {
+                int pivotCol = -1;
+                for (int c = 0; c < n; c++)
+                {
+                    if (Math.Abs(augmented[r, c]) > eps)
+                    {
+                        pivotCol = c;
+                        break;
+                    }
+                }
+
+                if (pivotCol >= 0)
+                {
+                    solution[pivotCol] = augmented[r, n];
+                }
+            }
+
+            return solution;
         }
 
         private static IEnumerable<int[]> Choose(int[] source, int k)
@@ -532,10 +677,30 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             return ChooseInternal(source, k, 0, 0, combo);
         }
 
-        private static List<int> GetIndependentRows(double[,] coefficients, IList<int> constraintRows)
+        private static IEnumerable<int[]> ChooseInternal(int[] source, int k, int start, int depth, int[] combo)
+        {
+            if (depth == k)
+            {
+                var snapshot = new int[k];
+                Array.Copy(combo, snapshot, k);
+                yield return snapshot;
+                yield break;
+            }
+
+            for (int i = start; i <= source.Length - (k - depth); i++)
+            {
+                combo[depth] = source[i];
+                foreach (var result in ChooseInternal(source, k, i + 1, depth + 1, combo))
+                {
+                    yield return result;
+                }
+            }
+        }
+
+        private static List<int> GetIndependentRows(double[,] coefficients, IList<int> constraintRows, double eps)
         {
             var independent = new List<int>();
-            if (constraintRows.Count == 0)
+            if (constraintRows == null || constraintRows.Count == 0)
             {
                 return independent;
             }
@@ -552,19 +717,18 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 }
             }
 
-            const double eps = 1e-9;
             int pivotRow = 0;
             for (int col = 0; col < cols && pivotRow < constraintRows.Count; col++)
             {
                 int bestRow = pivotRow;
                 double best = Math.Abs(working[bestRow, col]);
-                for (int row = pivotRow + 1; row < constraintRows.Count; row++)
+                for (int r = pivotRow + 1; r < constraintRows.Count; r++)
                 {
-                    double value = Math.Abs(working[row, col]);
-                    if (value > best)
+                    double val = Math.Abs(working[r, col]);
+                    if (val > best)
                     {
-                        best = value;
-                        bestRow = row;
+                        best = val;
+                        bestRow = r;
                     }
                 }
 
@@ -576,9 +740,9 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 if (bestRow != pivotRow)
                 {
                     SwapRows(working, bestRow, pivotRow);
-                    int temp = rowOrder[bestRow];
+                    int tmp = rowOrder[bestRow];
                     rowOrder[bestRow] = rowOrder[pivotRow];
-                    rowOrder[pivotRow] = temp;
+                    rowOrder[pivotRow] = tmp;
                 }
 
                 independent.Add(rowOrder[pivotRow]);
@@ -589,14 +753,14 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                     working[pivotRow, c] /= pivot;
                 }
 
-                for (int row = 0; row < constraintRows.Count; row++)
+                for (int r = 0; r < constraintRows.Count; r++)
                 {
-                    if (row == pivotRow)
+                    if (r == pivotRow)
                     {
                         continue;
                     }
 
-                    double factor = working[row, col];
+                    double factor = working[r, col];
                     if (Math.Abs(factor) < eps)
                     {
                         continue;
@@ -604,7 +768,7 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
 
                     for (int c = col; c < cols; c++)
                     {
-                        working[row, c] -= factor * working[pivotRow, c];
+                        working[r, c] -= factor * working[pivotRow, c];
                     }
                 }
 
@@ -612,142 +776,6 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             }
 
             return independent;
-        }
-
-        private static IEnumerable<int[]> ChooseInternal(int[] source, int k, int start, int depth, int[] combo)
-        {
-            if (depth == k)
-            {
-                var snapshot = new int[k];
-                Array.Copy(combo, snapshot, k);
-                yield return snapshot;
-                yield break;
-            }
-
-            for (int i = start; i <= source.Length - (k - depth); i++)
-            {
-                combo[depth] = source[i];
-                foreach (var c in ChooseInternal(source, k, i + 1, depth + 1, combo))
-                {
-                    yield return c;
-                }
-            }
-        }
-
-        private static IEnumerable<bool[]> EnumerateBinary(int length)
-        {
-            var total = 1 << length;
-            for (int mask = 0; mask < total; mask++)
-            {
-                var values = new bool[length];
-                for (int i = 0; i < length; i++)
-                {
-                    values[i] = (mask & (1 << i)) != 0;
-                }
-
-                yield return values;
-            }
-        }
-
-        private static double[] SolveLinearSystem(double[,] matrix, double[] rhs)
-        {
-            int n = rhs.Length;
-            var augmented = new double[n, n + 1];
-            var pivotColumn = new int[n];
-            for (int i = 0; i < n; i++)
-            {
-                pivotColumn[i] = -1;
-            }
-
-            for (int i = 0; i < n; i++)
-            {
-                for (int j = 0; j < n; j++)
-                {
-                    augmented[i, j] = matrix[i, j];
-                }
-                augmented[i, n] = rhs[i];
-            }
-
-            const double eps = 1e-9;
-            int rowPivotIndex = 0;
-            for (int col = 0; col < n && rowPivotIndex < n; col++)
-            {
-                int pivot = rowPivotIndex;
-                double best = Math.Abs(augmented[pivot, col]);
-                for (int row = rowPivotIndex + 1; row < n; row++)
-                {
-                    double value = Math.Abs(augmented[row, col]);
-                    if (value > best)
-                    {
-                        best = value;
-                        pivot = row;
-                    }
-                }
-
-                if (best < eps)
-                {
-                    continue;
-                }
-
-                if (pivot != rowPivotIndex)
-                {
-                    SwapRows(augmented, pivot, rowPivotIndex);
-                }
-
-                pivotColumn[rowPivotIndex] = col;
-
-                double pivotValue = augmented[rowPivotIndex, col];
-                for (int j = col; j <= n; j++)
-                {
-                    augmented[rowPivotIndex, j] /= pivotValue;
-                }
-
-                for (int row = 0; row < n; row++)
-                {
-                    if (row == rowPivotIndex)
-                    {
-                        continue;
-                    }
-
-                    double factor = augmented[row, col];
-                    for (int j = col; j <= n; j++)
-                    {
-                        augmented[row, j] -= factor * augmented[rowPivotIndex, j];
-                    }
-                }
-
-                rowPivotIndex++;
-            }
-
-            for (int row = 0; row < n; row++)
-            {
-                bool allZero = true;
-                for (int col = 0; col < n; col++)
-                {
-                    if (Math.Abs(augmented[row, col]) > eps)
-                    {
-                        allZero = false;
-                        break;
-                    }
-                }
-
-                if (allZero && Math.Abs(augmented[row, n]) > eps)
-                {
-                    return null;
-                }
-            }
-
-            var solution = new double[n];
-            for (int row = 0; row < n; row++)
-            {
-                int col = pivotColumn[row];
-                if (col >= 0)
-                {
-                    solution[col] = augmented[row, n];
-                }
-            }
-
-            return solution;
         }
 
         private static void SwapRows(double[,] matrix, int rowA, int rowB)
@@ -778,40 +806,23 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             return total;
         }
 
-        private static double ComputePenalty(
-            double[,] coefficients,
-            double[] candidate,
-            int targetRow,
-            double[] allRightHandSides,
-            double[] allTolerances)
+        private static IReadOnlyCollection<int> GetSoftRows(double[] allTolerances)
         {
-            double penalty = 0;
-            int rows = coefficients.GetLength(0);
-            const double softWeight = 0.01;
-            const double hardWeight = 1000.0;
-            for (int r = 0; r < rows; r++)
+            if (allTolerances == null)
             {
-                if (r == targetRow)
-                {
-                    continue;
-                }
+                return Array.Empty<int>();
+            }
 
-                double tolerance = r < allTolerances.Length ? allTolerances[r] : 0;
-                bool isSoft = tolerance >= 1e6;
-                double desired = r < allRightHandSides.Length ? allRightHandSides[r] : 0;
-                double value = EvaluateRow(coefficients, r, candidate);
-                double delta = Math.Abs(value - desired);
-                if (isSoft)
+            var rows = new List<int>();
+            for (int i = 0; i < allTolerances.Length; i++)
+            {
+                if (allTolerances[i] >= 1e6)
                 {
-                    penalty += softWeight * delta;
-                }
-                else
-                {
-                    penalty += hardWeight * delta;
+                    rows.Add(i);
                 }
             }
 
-            return penalty;
+            return rows;
         }
 
         private static Fraction ToFraction(double value)

@@ -1,0 +1,155 @@
+\documentclass[12pt]{article}
+
+\usepackage{amsmath, amssymb, amsfonts, geometry, array}
+\geometry{margin=1in}
+
+\title{Bounded Preemptive Simplex with Priority Goals: Full Tableau Walkthrough}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Problem}
+
+Decision variables with bounds:
+\[
+0 \le x_1 \le 4, \qquad 0 \le x_2 \le 3.
+\]
+
+Hard constraint:
+\[
+2x_1 + 3x_2 + s_c = 12 \quad (s_c \ge 0).
+\]
+
+Goal 1 (priority $P_1$): meet $x_1 + x_2 = 5$ with minimal \emph{underachievement}
+\[
+x_1 + x_2 + d_1^- - d_1^+ = 5, \quad \text{minimize } d_1^-.
+\]
+
+Goal 2 (priority $P_2$): keep $2x_1+x_2 \le 8$ with minimal \emph{overachievement}
+\[
+2x_1+x_2 + d_2^- - d_2^+ = 8, \quad \text{minimize } d_2^+.
+\]
+
+We begin at the bound-feasible point $x_1=x_2=0$ so that
+\[
+s_c = 12,\quad d_1^- = 5,\quad d_2^- = 8.
+\]
+
+Columns are ordered as
+\[
+[x_1,\; x_2,\; s_c,\; d_1^-,\; d_1^+,\; d_2^-,\; d_2^+].
+\]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section*{Tableau 1: Initial}
+
+\[
+\begin{array}{c|r|rrrrrrr}
+\text{Basic} & \text{RHS} & x_1 & x_2 & s_c & d_1^- & d_1^+ & d_2^- & d_2^+ \\
+\hline
+s_c     & 12 & 2 & 3 & 1 & 0 & 0 & 0 & 0 \\
+d_1^-   &  5 & 1 & 1 & 0 & 1 & -1 & 0 & 0 \\
+d_2^-   &  8 & 2 & 1 & 0 & 0 &  0 & 1 & -1 \\
+\hline
+P_1=z_1 &  0 & -1 & -1 & 0 & 0 & \phantom{-}1 & 0 & 0
+\end{array}
+\]
+
+Here, at the start, $r_{x_2}=-1<0$ so \emph{increasing} $x_2$ (from its lower bound) reduces $d_1^-$.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section*{Tableau 2: After preemptive slide $x_2:0\rightarrow 3$ (no pivot)}
+
+Increase $x_2$ until a limit is reached. Bounds allow $x_2 \le 3$, so we slide directly to $3$:
+\[
+x_2=3,\qquad s_c=3,\qquad d_1^-=2,\qquad d_2^-=5.
+\]
+
+\[
+\begin{array}{c|r|rrrrrrr}
+\text{Basic} & \text{RHS} & x_1 & x_2 & s_c & d_1^- & d_1^+ & d_2^- & d_2^+ \\
+\hline
+s_c     &  3 & 2 & 3 & 1 & 0 & 0 & 0 & 0 \\
+d_1^-   &  2 & 1 & 1 & 0 & 1 & -1 & 0 & 0 \\
+d_2^-   &  5 & 2 & 1 & 0 & 0 &  0 & 1 & -1 \\
+\hline
+P_1=z_1 & -2 & -1 & -1 & 0 & 0 & \phantom{-}1 & 0 & 0
+\end{array}
+\]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section*{Tableau 3: After Pivot 1 (enter $x_1$, leave $s_c$)}
+
+A pivot on the $(s_c,x_1)$ entry gives:
+
+\[
+\begin{array}{c|r|rrrrrrr}
+\text{Basic} & \text{RHS} & x_1 & x_2 & s_c & d_1^- & d_1^+ & d_2^- & d_2^+ \\
+\hline
+x_1     & 1.5 & 1 & 1.5 & 0.5 & 0 & 0 & 0 & 0 \\
+d_1^-   & 0.5 & 0 & -0.5 & -0.5 & 1 & -1 & 0 & 0 \\
+d_2^-   & 2   & 0 & -2   & -1   & 0 &  0 & 1 & -1 \\
+\hline
+P_1=z_1 & -0.5 & 0 & 0.5 & 0.5 & 0 & \phantom{-}1 & 0 & 0
+\end{array}
+\]
+
+We have $x_1=1.5$, $x_2=3$, $d_1^-=0.5$. To push $d_1^- \downarrow 0$, we must \emph{decrease} $x_2$ off its upper bound (its reduced cost $+0.5$ for $P_1$ means that decreasing it will lower $z_1$).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section*{Intermediate Tableau: Bound-Exchange Pivot (enter $x_2$ by decreasing)}
+
+We now pivot on the $(d_1^-,x_2)$ entry (value $-0.5$) to bring $x_2$ into the basis and send $d_1^-$ out:
+
+\[
+\begin{array}{c|r|rrrrrrr}
+\text{Basic} & \text{RHS} & x_1 & x_2 & s_c & d_1^- & d_1^+ & d_2^- & d_2^+ \\ 
+\hline
+x_1   & 3 & 1 & 0 & 0 & -1 & \phantom{-}1 & \phantom{-}1 & -1 \\
+x_2   & 2 & 0 & 1 & 0 & \phantom{-}2 & -2 & -1 & \phantom{-}1 \\
+d_2^- & 0 & 0 & 0 & 1 & -2 & \phantom{-}2 & \phantom{-}1 & -1 \\
+\hline
+P_1=z_1 & 0 & 0 & 0 & 0 & (\text{locked}) & & &
+\end{array}
+\]
+
+This tableau represents the point $(x_1,x_2)=(3,2)$ with
+\[
+d_1^-=0,\quad d_1^+=0,\quad d_2^-=0,\quad d_2^+=0,\quad s_c=0.
+\]
+Thus the goal of priority $P_1$ (minimizing $d_1^-$) has reached the best possible value of~$0$.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section*{Final $P_1$-Optimal Tableau (one clean basis)}
+
+A convenient $P_1$-optimal basis is $\{x_1,x_2,s_c\}$:
+
+\[
+\begin{array}{c|r|rrrrrrr}
+\text{Basic} & \text{RHS} & x_1 & x_2 & s_c & d_1^- & d_1^+ & d_2^- & d_2^+ \\
+\hline
+x_1 & 3 & 1 & 0 & 0 & -1 & \phantom{-}1 & \phantom{-}1 & -1 \\
+x_2 & 2 & 0 & 1 & 0 & \phantom{-}2 & -2 & -1 & \phantom{-}1 \\
+s_c & 0 & 0 & 0 & 1 & -4 & \phantom{-}4 & \phantom{-}1 & -1 \\
+\hline
+P_1=z_1 & 0 & 0 & 0 & 0 & (\text{locked}) & & &
+\end{array}
+\]
+
+Since $d_1^-=0$ is fixed (optimal for $P_1$), we check $P_2$:
+\[
+2x_1+x_2 = 2\cdot 3 + 2 = 8 \quad\Rightarrow\quad d_2^+=0,
+\]
+which is optimal subject to keeping $d_1^-=0$.
+
+\section*{Conclusion}
+
+The lexicographically optimal solution is
+\[
+x_1 = 3,\qquad x_2 = 2,\qquad s_c=0,
+\]
+with all deviational variables zero. Thus both goals are satisfied at their best possible levels.
+
+\end{document}

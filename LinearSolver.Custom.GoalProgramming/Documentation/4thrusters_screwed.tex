@@ -1,0 +1,207 @@
+\documentclass[12pt]{article}
+
+% XeLaTeX fonts
+\usepackage{fontspec}
+\setmainfont{Latin Modern Roman}
+
+\usepackage{amsmath, amssymb, geometry, array, booktabs}
+\geometry{margin=1in}
+
+% Status tags
+\newcommand{\LB}{\textsf{LB}}
+\newcommand{\UB}{\textsf{UB}}
+\newcommand{\B}{\textsf{B}}
+
+\begin{document}
+
+\section*{Preemptive (Priority) Goal Programming with Bounded Preemptive Simplex}
+
+We have four thrusters with bounds
+\[
+0 \le t_i \le 1\quad (i=1,2,3,4).
+\]
+Geometry and directions:
+\[
+\begin{aligned}
+&r_1=(2,2,0),\ a_1=(100,100,100),\qquad
+r_2=(-2,-2,0),\ a_2=(100,100,100),\\
+&r_3=(0,2,2),\ a_3=(100,100,100),\qquad
+r_4=(0,-2,-2),\ a_4=(100,100,100).
+\end{aligned}
+\]
+
+\subsection*{Force/torque maps}
+Each force column is $a_i$; each torque column is $r_i\times a_i$.
+With $a=(100,100,100)$ and $r=(x,y,z)$,
+\[
+r\times a=\big(y\cdot 100 - z\cdot 100,\ \ z\cdot 100 - x\cdot 100,\ \ x\cdot 100 - y\cdot 100\big).
+\]
+Thus, assembling $A=[a_1\,a_2\,a_3\,a_4]$ and $B=[r_1\times a_1\ \cdots\ r_4\times a_4]$:
+\[
+A=\begin{bmatrix}
+100&100&100&100\\
+100&100&100&100\\
+100&100&100&100
+\end{bmatrix},
+\quad
+B=\begin{bmatrix}
+200&-200&0&0\\
+-200&200&200&-200\\
+0&0&-200&200
+\end{bmatrix}.
+\]
+Hence for $t=(t_1,t_2,t_3,t_4)^\top$,
+\[
+F=A\,t=100\Big(\sum\nolimits_{i=1}^4 t_i\Big)\begin{bmatrix}1\\1\\1\end{bmatrix},
+\quad
+T=B\,t=\begin{bmatrix}
+200(t_1-t_2)\\
+200(-t_1+t_2+t_3-t_4)\\
+200(-t_3+t_4)
+\end{bmatrix}.
+\]
+
+% ============================================================
+\section*{Stage $P_1$ (highest priority): Minimize torque $\|T\|_1$}
+
+Introduce deviational variables $\tau_x^\pm,\tau_y^\pm,\tau_z^\pm\ge 0$ and write
+\[
+\begin{aligned}
+&200(t_1-t_2)+\tau_x^- - \tau_x^+ = 0,\\
+&200(-t_1+t_2+t_3-t_4)+\tau_y^- - \tau_y^+ = 0,\\
+&200(-t_3+t_4)+\tau_z^- - \tau_z^+ = 0,
+\end{aligned}
+\qquad
+\min z_1 = (\tau_x^++\tau_x^-)+(\tau_y^++\tau_y^-)+(\tau_z^++\tau_z^-).
+\]
+
+We keep bounds \emph{inside} the simplex via LB/UB/B statuses.
+
+\subsection*{P\textsubscript{1} Tableau 0 (start; make $\tau^+$ basic in each row)}
+\[
+\begin{array}{c|r|rrrrrr|c}
+\text{Basic} & \text{RHS} & t_1 & t_2 & t_3 & t_4 & \tau^- & \tau^+ & \text{Status}\\
+\hline
+\tau_x^+ & 0 & +200 & -200 & 0 & 0 & +1 & 1 & \B\\
+\tau_y^+ & 0 & -200 & +200 & +200 & -200 & +1 & 1 & \B\\
+\tau_z^+ & 0 & 0 & 0 & -200 & +200 & +1 & 1 & \B\\
+\hline
+z_1 & 0 & \mathbf{0} & \mathbf{0} & \mathbf{0} & \mathbf{0} & \mathbf{+3} & 0 &
+\end{array}
+\]
+Nonbasic statuses at start:
+\[
+t_1,t_2,t_3,t_4:\ \LB\ ([0,1]),\qquad \tau_x^-,\tau_y^-,\tau_z^-:\ \LB.
+\]
+All four $t_i$ have reduced cost $0$ (we can move along directions that keep $z_1$ unchanged).
+
+\paragraph{Pivot 1 (degenerate): bring $t_1$ into the $x$-torque row.}
+Entering $t_1$ from \LB\ (allowed with $r=0$); pivot on $(\tau_x^+,\ t_1)$.
+
+Solve $\tau_x^+$-row for $t_1$:
+\[
+t_1=t_2-\tfrac{1}{200}\tau_x^-+\tfrac{1}{200}\tau_x^+.
+\]
+
+\[
+\begin{array}{c|r|rrrrrr|c}
+\text{Basic} & \text{RHS} & t_1 & t_2 & t_3 & t_4 & \tau^- & \tau^+ & \text{Status}\\
+\hline
+t_1 & 0 & 1 & -1 & 0 & 0 & -\tfrac{1}{200} & +\tfrac{1}{200} & \B\\
+\tau_y^+ & 0 & 0 & 0 & +200 & -200 & +1 & 1 & \B\\
+\tau_z^+ & 0 & 0 & 0 & -200 & +200 & +1 & 1 & \B\\
+\hline
+z_1 & 0 & 0 & 0 & \mathbf{0} & \mathbf{0} & \mathbf{+3} & 0 &
+\end{array}
+\]
+
+\paragraph{Pivot 2 (degenerate): bring $t_3$ into the $z$-torque row.}
+Pivot on $(\tau_z^+,\ t_3)$ and solve for $t_3$:
+\[
+t_3=t_4+\tfrac{1}{200}\tau_z^- - \tfrac{1}{200}\tau_z^+.
+\]
+
+\[
+\begin{array}{c|r|rrrrrr|c}
+\text{Basic} & \text{RHS} & t_1 & t_2 & t_3 & t_4 & \tau^- & \tau^+ & \text{Status}\\
+\hline
+t_1 & 0 & 1 & -1 & 0 & 0 & -\tfrac{1}{200} & +\tfrac{1}{200} & \B\\
+\tau_y^+ & 0 & 0 & 0 & 0 & 0 & +1 & 1 & \B\\
+t_3 & 0 & 0 & 0 & 1 & -1 & +\tfrac{1}{200} & -\tfrac{1}{200} & \B\\
+\hline
+z_1 & 0 & 0 & 0 & 0 & 0 & \mathbf{+3} & 0 &
+\end{array}
+\]
+
+Reading off the \emph{zero-torque manifold} by setting all deviations $\tau^\pm=0$:
+\[
+\boxed{t_1-t_2=0,\qquad t_3-t_4=0}
+\]
+(i.e.\ $t_1=t_2$ and $t_3=t_4$), and the $y$-torque row becomes redundant once these hold.
+Thus the best $P_1$ value is \(\boxed{Z_1^\star=0}\).
+We \emph{lock} $t_1=t_2$ and $t_3=t_4$ for Stage $P_2$.
+
+% ============================================================
+\section*{Stage $P_2$: Maximize force along $(1,1,1)$}
+
+Since $F=100(\sum t_i)\,(1,1,1)$, maximizing along $(1,1,1)$ is equivalent to maximizing
+\[
+\max\ z_2 = t_1+t_2+t_3+t_4
+\quad\text{s.t.}\quad
+t_1=t_2,\ \ t_3=t_4,\ \ 0\le t_i\le 1.
+\]
+Let $v_1:=t_1=t_2$ and $v_2:=t_3=t_4$ with $0\le v_1,v_2\le 1$. Then
+\[
+z_2=2v_1+2v_2,\qquad F=100(2v_1+2v_2)\,(1,1,1).
+\]
+
+\subsection*{P\textsubscript{2} Tableau A (start)}
+We keep the two equalities as definition rows; $v_1,v_2$ are nonbasic at LB.
+
+\[
+\begin{array}{c|c|c|c}
+\text{Var} & \text{Value} & \text{Status} & \text{Bounds}\\
+\hline
+v_1 & 0.0 & \LB & [0,1] \\
+v_2 & 0.0 & \LB & [0,1] \\
+t_1 & 0.0 & \B & (t_1=v_1) \\
+t_2 & 0.0 & \B & (t_2=v_1) \\
+t_3 & 0.0 & \B & (t_3=v_2) \\
+t_4 & 0.0 & \B & (t_4=v_2) \\
+z_2 & 0 &  & r_{v_1}=+2,\ \ r_{v_2}=+2
+\end{array}
+\]
+
+Bounded-preemptive step rule (maximization):
+- Nonbasic at \LB{} with \(r>0\) can \emph{increase}. No row blocks; only opposite bounds matter.
+- Both $v_1$ and $v_2$ hit their UBs first (pure \emph{preemptive bound hits}, no pivot).
+
+\subsection*{P\textsubscript{2} Tableau B (after preemptive UB hits)}
+\[
+\begin{array}{c|c|c|c}
+\text{Var} & \text{Value} & \text{Status} & \text{Bounds}\\
+\hline
+v_1 & 1.0 & \UB & [0,1] \\
+v_2 & 1.0 & \UB & [0,1] \\
+t_1 & 1.0 & \B & (t_1=v_1) \\
+t_2 & 1.0 & \B & (t_2=v_1) \\
+t_3 & 1.0 & \B & (t_3=v_2) \\
+t_4 & 1.0 & \B & (t_4=v_2) \\
+z_2 & 4 &  & r_{v_1}=+2,\ r_{v_2}=+2 \ (\text{cannot improve by decreasing})
+\end{array}
+\]
+
+\subsection*{Stage $P_2$ optimum and outputs}
+\[
+\boxed{t_1=t_2=t_3=t_4=1},\qquad
+\boxed{z_2^\star=4},\qquad
+\boxed{F=100\cdot 4\,(1,1,1)=(400,400,400)},\qquad
+\boxed{T=(0,0,0)}.
+\]
+
+\paragraph{Bounded-preemptive optimality check.}
+At the end, $v_1$ and $v_2$ are nonbasic at \UB. For maximization, a nonbasic at \UB{}
+could only help if its reduced cost were \emph{negative} (so we would decrease it). Here
+$r_{v_1}=r_{v_2}=+2>0$, so decreasing either worsens $z_2$. No other candidates $\Rightarrow$ optimal.
+
+\end{document}

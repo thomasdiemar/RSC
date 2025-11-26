@@ -1,0 +1,178 @@
+\documentclass[12pt]{article}
+
+% XeLaTeX fonts
+\usepackage{fontspec}
+\setmainfont{Latin Modern Roman}
+
+\usepackage{amsmath, amssymb, geometry, array, booktabs}
+\geometry{margin=1in}
+
+% Bound status tags
+\newcommand{\LB}{\textsf{LB}}
+\newcommand{\UB}{\textsf{UB}}
+\newcommand{\B}{\textsf{B}}
+
+\begin{document}
+
+\section*{Bounded Preemptive Simplex with Priority Goals (Full Tableaux)}
+
+Geometry (updated):
+\[
+r_1=(0,2,0),\quad a_1=(-100,0,0),\qquad
+r_2=(0,-4,0),\quad a_2=(-100,0,0),
+\qquad 0\le t_1,t_2\le 1.
+\]
+
+Force and torque maps:
+\[
+A=\begin{bmatrix}
+-100 & -100\\ 0 & 0\\ 0 & 0
+\end{bmatrix},
+\qquad
+B=\begin{bmatrix}
+0&0\\ 0&0\\ 200&-400
+\end{bmatrix}.
+\]
+
+Thus
+\[
+F=\begin{bmatrix}-100(t_1+t_2)\\0\\0\end{bmatrix},\qquad
+T=\begin{bmatrix}0\\0\\200\,t_1-400\,t_2\end{bmatrix}.
+\]
+
+% ================================================================
+\section*{Stage $P_1$: Minimize Torque (L1)}
+
+Introduce deviational variables $\tau^+, \tau^-\ge 0$:
+\[
+200t_1 - 400t_2 + \tau^- - \tau^+ = 0,
+\qquad
+\min z_1 = \tau^+ + \tau^- .
+\]
+
+\subsection*{P1 Tableau 0 (start)}
+Make $\tau^+$ basic:
+
+\[
+\begin{array}{c|r|rrrr|c}
+\text{Basic} & \text{RHS} & t_1 & t_2 & \tau^- & \tau^+ & \text{Status}\\
+\hline
+\tau^+ & 0 & +200 & -400 & +1 & 1 & \B\\
+\hline
+z_1 & 0 & \mathbf{+200} & \mathbf{-400} & \mathbf{+2} & 0 &
+\end{array}
+\]
+
+Nonbasic variables at start:
+\[
+t_1:\ \LB,\qquad
+t_2:\ \LB,\qquad
+\tau^-:\ \LB.
+\]
+
+Minimization rule:
+- A nonbasic at \LB{} can enter if $r_j<0$.  
+Here $r_{t_2}=-400<0$ $\Rightarrow$ $t_2$ enters.
+
+\subsection*{P1 Tableau 1 (degenerate pivot: $t_2$ enters, $\tau^+$ leaves)}
+
+Solve the goal row for $t_2$:
+\[
+t_2=\tfrac{1}{2}t_1+\tfrac{1}{400}\tau^- - \tfrac{1}{400}\tau^+.
+\]
+
+\[
+\begin{array}{c|r|rrrr|c}
+\text{Basic} & \text{RHS} & t_1 & t_2 & \tau^- & \tau^+ & \text{Status}\\
+\hline
+t_2 & 0 & \tfrac{1}{2} & 1 & \tfrac{1}{400} & -\tfrac{1}{400} & \B\\
+\hline
+z_1 & 0 & \mathbf{0} & 0 & \mathbf{+1} & \mathbf{+1} &
+\end{array}
+\]
+
+This shows:
+\[
+z_1 = 0\quad\text{whenever}\quad \tau^\pm=0,\ \text{and}\ 200t_1-400t_2=0,
+\]
+i.e.
+\[
+\boxed{t_1 = 2t_2}.
+\]
+So torque can be driven to zero: $Z_1^*=0$.  
+Lock this as a hard relation for $P_2$.
+
+% ================================================================
+\section*{Stage $P_2$: Force objective with $P_1$ locked}
+
+With $t_1=2t_2$ and $0\le t_1,t_2\le1$, the effective bound is
+\[
+0 \le t_2 \le 0.5,\qquad t_1=2t_2.
+\]
+
+% ---------------------------------------------------------------
+\subsection*{Variant A: Maximize $+x$ force}
+
+\[
+z_2 = F_x = -100(t_1+t_2) = -300\,t_2,\qquad \max z_2.
+\]
+
+\subsubsection*{P2-A Tableau}
+\[
+\begin{array}{c|c|c|c}
+\text{Var} & \text{Value} & \text{Status} & \text{Reduced cost}\\
+\hline
+t_2 & 0.0 & \LB\ ([0,0.5]) & -300\\
+t_1 & 0.0 & \B\ (t_1=2t_2) & \text{--}
+\end{array}
+\]
+
+Maximization rule:
+- Nonbasic at \LB{} can improve only if $r_j>0$.  
+Here $r_{t_2}=-300<0$ $\Rightarrow$ increasing $t_2$ makes $z_2$ worse.
+
+\[
+\boxed{t_1=t_2=0,\quad F=(0,0,0),\ T=(0,0,0).}
+\]
+
+% ---------------------------------------------------------------
+\subsection*{Variant B: Maximize thrust in $-x$ direction}
+
+Instead maximize $-F_x=+300t_2$.
+
+\subsubsection*{P2-B Tableau A (start)}
+\[
+\begin{array}{c|c|c|c}
+\text{Var} & \text{Value} & \text{Status} & \text{Reduced cost}\\
+\hline
+t_2 & 0.0 & \LB\ ([0,0.5]) & +300\\
+t_1 & 0.0 & \B\ (t_1=2t_2) & \text{--}
+\end{array}
+\]
+
+Bounded ratio test (preemptive):
+\[
+t_1=2t_2\le 1 \Rightarrow t_2\le 0.5.
+\]
+So opposite-bound distance is $0.5-0=0.5$.  
+No pivot needed: \emph{preemptive UB hit}.
+
+\subsubsection*{P2-B Tableau B (after UB hit)}
+\[
+\begin{array}{c|c|c}
+\text{Var} & \text{Value} & \text{Status}\\
+\hline
+t_2 & 0.5 & \UB\ ([0,0.5])\\
+t_1 & 1.0 & \B\ (t_1=2t_2)
+\end{array}
+\]
+
+Optimality (max):
+- Nonbasic at \UB{} could only help if $r_j<0$.  
+Here $r_{t_2}=+300>0$ $\Rightarrow$ decreasing $t_2$ reduces $z_2$.
+
+\[
+\boxed{t_1=1,\quad t_2=0.5,\quad F=(-150,0,0),\ T=(0,0,0).}
+\]
+
+\end{document}

@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Degenerate Row Pivot — Step-by-Step with Simplex Tables (HTML)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root{
+    --ink:#1f2328; --muted:#59636e; --bg:#f7f9fb; --line:#dce1e7;
+    --enter:#e6f0ff; --enter-b:#7aa2ff;
+    --art:#fff3b0; --art-b:#e0cc7a;
+    --obj:#e8f7e8; --obj-b:#95d595;
+    --warn:#ffe6ea; --warn-b:#ff9db0;
+  }
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  main{max-width:1100px;margin:28px auto;padding:0 18px}
+  h1{font-size:1.9rem;margin:.2rem 0 1rem}
+  h2{margin:1.2rem 0 .6rem}
+  h3{margin:1rem 0 .5rem}
+  p.lead{color:var(--muted)}
+  .card{background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 1px 0 rgba(0,0,0,.03);margin:.7rem 0}
+  .hd{padding:10px 12px;border-bottom:1px solid var(--line);font-weight:600}
+  .bd{padding:12px}
+  .note{background:#fff;border-left:4px solid #c3cfe6;padding:10px 12px;border-radius:6px;border:1px solid var(--line)}
+  table{width:100%;border-collapse:collapse;margin:.5rem 0}
+  th,td{border:1px solid var(--line);padding:6px 8px;text-align:right}
+  th:first-child,td:first-child{text-align:left}
+  .status{text-align:center;white-space:nowrap}
+  .zrow td,.zrow th{background:var(--obj);font-weight:700;border-color:var(--obj-b)}
+  .hl-enter{background:var(--enter);border:1px solid var(--enter-b);border-radius:8px;padding:10px;margin:.5rem 0}
+  .hl-art{background:var(--art);border:1px solid var(--art-b);border-radius:8px;padding:10px;margin:.5rem 0}
+  .hl-obj{background:var(--obj);border:1px solid var(--obj-b);border-radius:8px;padding:10px;margin:.5rem 0}
+  code{background:#f6f8fa;border:1px solid var(--line);padding:0 .25rem;border-radius:4px}
+  .tiny{font-size:.92rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+
+<h1>Degenerate Row Pivot in the Bounded Simplex — Full Walkthrough with Simplex Tables</h1>
+<p class="lead">
+A <b>degenerate row pivot</b> occurs when the Augmented Ratio Test (ART) chooses a <b>step size θ = 0</b>,
+so the <em>basis changes</em> (we pivot) but the <em>point and objective value do not</em>.
+Below are minimal, concrete simplex tables that show exactly how and why this happens.
+</p>
+
+<!-- ====================== PROBLEM ====================== -->
+<div class="card">
+  <div class="hd">Problem we will use (Minimization)</div>
+  <div class="bd">
+    <div class="note">
+      Objective: <code>min z = −(x₁ + x₂)</code>  (equivalently, maximize <code>x₁ + x₂</code>)<br/>
+      Equality row: <code>x₁ − x₂ = 0</code>  (kept inside the simplex, forms the basis row)<br/>
+      Bounds: <code>0 ≤ x₁ ≤ 0</code> (i.e., <b>x₁ is fixed at 0</b>), and <code>0 ≤ x₂ ≤ 1</code><br/>
+      Start at the feasible point: <code>(x₁, x₂) = (0, 0)</code>.
+    </div>
+    <p class="tiny">We deliberately make x₁ fixed at its bound so that any attempt to move along the entering column immediately “wants” to push x₁ beyond its allowed value; ART will then return θ=0 → a degenerate row pivot.</p>
+  </div>
+</div>
+
+<!-- ====================== INITIAL TABLE ====================== -->
+<h2>Step 0 — Initial Simplex Tableau</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Basic</th><th>RHS</th><th>x₁</th><th>x₂</th><th class="status">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>x₁</b> (from row <code>x₁ − x₂ = 0</code>)</td>
+      <td>0</td>
+      <td>+1</td>
+      <td>−1</td>
+      <td class="status">B (LB=UB=0)</td>
+    </tr>
+    <tr class="zrow">
+      <td><b>z (min)</b></td>
+      <td><b>0</b></td>
+      <td>—</td>
+      <td><b>r(x₂)=−2</b></td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="hl-enter">
+  <b>Choose entering variable:</b> We are minimizing, and for a nonbasic at LB we need <code>r &lt; 0</code>.  
+  Here <code>x₂</code> is at LB with <code>r(x₂)=−2</code> ⇒ eligible. <b>Enter x₂ from LB</b>.
+</div>
+
+<div class="hl-art">
+  <b>Augmented Ratio Test (ART)</b> for <b>x₂</b> entering from LB:
+  <ul>
+    <li>Direction in basic space: <code>d = B⁻¹ a₂</code>.</li>
+    <li>From the row <code>x₁ − x₂ = 0</code>, the coefficient of <code>x₂</code> is <code>−1</code> ⇒ <code>d = −1</code>.</li>
+    <li>Basics change as <code>Δx₁ = −d·θ = −(−1)·θ = +θ</code>, entering changes as <code>Δx₂ = +θ</code> (from LB).</li>
+    <li><b>Row limit (x₁):</b> x₁ is currently 0 and has <b>UB = 0</b>. Since <code>Δx₁ = +θ</code> would try to increase it,
+        the first bound we’d hit is UB. Formula for LB-entry with <code>d&lt;0</code> is UB-limit:
+        <div class="note"><code>θ_row = (u₁ − x₁)/(-d) = (0 − 0)/(1) = 0.</code></div>
+    </li>
+    <li><b>Opposite bound of entering x₂:</b> <code>θ_bound = u₂ − x₂ = 1 − 0 = 1</code>.</li>
+  </ul>
+  The smallest nonnegative limit is <b>θ = 0</b>, and a <b>row wins</b> ⇒ <b>degenerate row pivot</b>.
+</div>
+
+<div class="hl-obj">
+  <b>Objective update:</b> <code>Δz = r_enter × θ = (−2) × 0 = 0</code>.  
+  The point and objective stay the same; only the <em>basis</em> will change.
+</div>
+
+<!-- ====================== PIVOT ====================== -->
+<h2>Step 1 — Perform the Degenerate Row Pivot (θ = 0)</h2>
+<p>We Gauss–Jordan pivot on the (<b>row x₁</b>, <b>column x₂</b>) entry (−1):</p>
+<ul>
+  <li><b>x₂</b> becomes <b>basic</b>.</li>
+  <li><b>x₁</b> leaves the basis and becomes <b>nonbasic fixed at its bound</b> (0).</li>
+  <li>All numerical values (RHS) remain exactly the same.</li>
+</ul>
+
+<table>
+  <thead>
+    <tr>
+      <th>Basic</th><th>RHS</th><th>x₁</th><th>x₂</th><th class="status">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>x₂</b> (row)</td>
+      <td>0</td>
+      <td>−1</td>
+      <td>+1</td>
+      <td class="status">B</td>
+    </tr>
+    <tr class="zrow">
+      <td><b>z (min)</b></td>
+      <td><b>0</b></td>
+      <td><b>r(x₁)</b> (now nonbasic at 0)</td>
+      <td>—</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="tiny">
+The basis has changed (which changes the dual quantities / reduced costs), even though
+the primal point <code>(x₁,x₂)=(0,0)</code> and <code>z=0</code> did not move.
+This basis change can unblock progress in subsequent iterations while staying
+at the same vertex.
+</p>
+
+<hr/>
+
+<!-- ====================== SECOND EXAMPLE ====================== -->
+<h2>Bonus: Degenerate Row Pivot with a Row–Row Tie at θ = 0</h2>
+<p>We now show a situation where <em>two</em> basic rows produce a zero step limit, so we must choose the leaving row by a tie-break rule (e.g., Bland’s rule).</p>
+
+<div class="card">
+  <div class="hd">Variant setup</div>
+  <div class="bd">
+    <div class="note">
+      Objective (min): <code>z = −(x₁ + x₂ + x₃)</code><br/>
+      Equalities (two rows in the basis):<br/>
+      R₁: <code>x₁ − x₂ = 0</code> (x₁ basic)<br/>
+      R₂: <code>x₃ − x₂ = 0</code> (x₃ basic)<br/>
+      Bounds: <code>0 ≤ x₁ ≤ 0</code> (fixed at 0), <code>0 ≤ x₃ ≤ 0</code> (fixed at 0), <code>0 ≤ x₂ ≤ 1</code><br/>
+      Start at <code>(x₁,x₂,x₃)=(0,0,0)</code>.
+    </div>
+    <p>Intuition: increasing <code>x₂</code> from LB tries to increase both <code>x₁</code> and <code>x₃</code> (because of the two coupling rows), but both are fixed at 0 ⇒ both rows block at θ=0.</p>
+  </div>
+</div>
+
+<h3>Initial tableau (two basic rows)</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Basic</th><th>RHS</th><th>x₁</th><th>x₂</th><th>x₃</th><th class="status">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>x₁</b> (R₁)</td><td>0</td><td>+1</td><td>−1</td><td>0</td><td class="status">B (LB=UB=0)</td>
+    </tr>
+    <tr>
+      <td><b>x₃</b> (R₂)</td><td>0</td><td>0</td><td>−1</td><td>+1</td><td class="status">B (LB=UB=0)</td>
+    </tr>
+    <tr class="zrow">
+      <td><b>z (min)</b></td><td><b>0</b></td>
+      <td>—</td><td><b>r(x₂)=−3</b></td><td>—</td><td></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="hl-enter"><b>Choose entering:</b> x₂ at LB with r(x₂)=−3 ⇒ enter x₂ from LB.</div>
+
+<div class="hl-art">
+  <b>ART for x₂</b>:
+  <ul>
+    <li>Direction components from the two rows are both <code>d = −1</code> (coefficients of x₂ in R₁ and R₂).</li>
+    <li>Basics change: <code>Δx₁ = −(−1)θ = +θ</code>, <code>Δx₃ = −(−1)θ = +θ</code>.</li>
+    <li>Row limits:
+      <ul>
+        <li>R₁ (x₁ fixed at UB=0): UB-hit immediately ⇒ <code>θ₁ = 0</code>.</li>
+        <li>R₂ (x₃ fixed at UB=0): UB-hit immediately ⇒ <code>θ₂ = 0</code>.</li>
+      </ul>
+    </li>
+    <li>Opposite bound of x₂: <code>θ_bound = 1</code>.</li>
+  </ul>
+  Minimum is <b>θ=0</b> with a <b>row–row tie</b> (R₁ and R₂). Use tie-break (e.g., Bland) to pick the leaving row; say we choose R₁ → leave x₁.
+</div>
+
+<div class="hl-obj"><b>Objective change:</b> <code>Δz = r_enter × θ = (−3) × 0 = 0</code>. (Still degenerate.)</div>
+
+<h3>Pivots at θ = 0 (row–row tie)</h3>
+<ul>
+  <li>Pivot on (R₁, x₂) first: x₂ becomes basic, x₁ leaves to bound (0); values unchanged.</li>
+  <li>We could later pivot on R₂ similarly if needed (another degenerate pivot) to change which columns are basic.</li>
+</ul>
+
+<table>
+  <thead>
+    <tr>
+      <th>Basic</th><th>RHS</th><th>x₁</th><th>x₂</th><th>x₃</th><th class="status">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>x₂</b> (R₁ post-pivot)</td><td>0</td><td>−1</td><td>+1</td><td>0</td><td class="status">B</td>
+    </tr>
+    <tr>
+      <td><b>x₃</b> (R₂)</td><td>0</td><td>0</td><td>−1</td><td>+1</td><td class="status">B (LB=UB=0)</td>
+    </tr>
+    <tr class="zrow">
+      <td><b>z (min)</b></td><td><b>0</b></td>
+      <td><b>r(x₁)</b> (now nonbasic at 0)</td><td>—</td><td>—</td><td></td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="tiny">
+Again, the point did not move; only the basis changed. You can see how degeneracy can cause multiple θ=0 pivots if several basics are blocking at their bounds. Using Bland’s rule (or lexicographic pivoting) prevents cycling.
+</p>
+
+<hr/>
+
+<h2>What to Remember</h2>
+<ul>
+  <li><b>Degenerate row pivot</b> = ART returns <b>θ=0</b> and a <b>row</b> wins (or ties).</li>
+  <li>We still do the <b>Gauss–Jordan pivot</b> to change the <b>basis</b>; the primal point and <b>z</b> stay the same.</li>
+  <li>After the pivot, <b>reduced costs change</b> (because the basis changed), which may open a new improving (non-degenerate) step next.</li>
+  <li>With multiple zero row limits, apply a <b>tie-break rule</b> (Bland) to choose the leaving row.</li>
+</ul>
+
+</main>
+</body>
+</html>

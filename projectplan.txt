@@ -1,0 +1,42 @@
+Project Plan: Implement Bounded Simplex with Phase I/II and Lexicographic Locking
+
+1) Clarify requirements & constraints [Done]
+- Variables are continuous in [0,1] (no integer branching for now).
+- Non-commanded axes are hard equalities to zero; commanded axes are objectives (max/min).
+- Maintain lexicographic priorities: solve higher priority goals, lock achieved value as equality for subsequent goals.
+- Respect allowed namespaces; no MSF dependencies.
+
+2) Design the tableau & data flow [Done]
+- Define a simplex tableau: basis/nonbasis, RHS, objective row, bounds per variable.
+- Map 6×N matrix to constraints: hard axes as equalities (desired or 0); target axis as the objective row for phase II.
+- Represent soft rows (NaN) as soft penalties or skip them in the hard constraint set for phase I.
+
+3) Implement Phase I (feasible start) [In progress]
+- Add artificial variables for each equality to drive feasibility. (pending)
+- Phase I objective: minimize sum of artificial variables. (pending)
+- Pivot until artificials leave the basis or are zero; fail if infeasible. (pending)
+- Enforce bounds [0,1] on real variables during pivots. (pending)
+- Current scaffolding: added BoundedSimplexTableau (equality row tracking) and BoundedSimplexSolver with lower-bound init and a basic feasibility adjustment loop.
+
+4) Implement Phase II (optimize target) [Pending]
+- Set objective to maximize/minimize the target row result.
+- Use bounded simplex: compute reduced costs, select entering, ratio test with bounds, update basis.
+- Terminate on optimality; detect unbounded/infeasible.
+
+5) Lexicographic locking [Pending]
+- After phase II for a priority, record achieved target value and convert that row into an equality (RHS locked).
+- Proceed to the next priority and repeat phase I/II with locked constraints.
+
+6) Integration [Pending]
+- Wire LexicographicGoalSolver.Solve to build tableau per command, run phase I/II per priority, and stream progress.
+- Replace current enumerative/LS paths; remove binary corner search.
+
+7) Testing & validation [Pending]
+- Re-enable all tests: core 12-thruster, 3Fx/3Opp/4Fx, Random/Random2.
+- Compare thruster outputs/resultant force/torque to MSF; add tie-breakers (e.g., minimize total thrust on ties).
+- Add targeted unit tests for phase I feasibility (zero commands) and bounded optimality (hit 0 or 1 bounds).
+
+8) Cleanup & docs [Pending]
+- Update comments to reflect the new simplex flow.
+- Ensure no MSF references in Custom.GoalProgramming; keep within allowed namespaces.
+- Document known limitations (no integer branching).

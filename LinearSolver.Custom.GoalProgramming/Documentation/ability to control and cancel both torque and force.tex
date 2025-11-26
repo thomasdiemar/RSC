@@ -1,0 +1,204 @@
+\documentclass[12pt]{article}
+
+% ========== XeLaTeX Setup ==========
+\usepackage{fontspec}
+\setmainfont{Times New Roman}
+
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{enumitem}
+
+\title{A Unified Thruster Configuration for Pure Translation and Pure Rotation\\
+with Automatic Center-of-Mass Compensation}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{1. Goal}
+
+We seek a \emph{single, fixed thruster configuration} mounted on a rigid body that can:
+
+\begin{enumerate}[label=(\alph*)]
+    \item Translate in any direction with \textbf{zero torque},
+    \item Generate torque about any axis with \textbf{zero net force},
+    \item Continue to achieve (a--b) even when the center of mass (CoM) \textbf{moves inside the vehicle}.
+\end{enumerate}
+
+The solution is to use a combination of:
+\begin{itemize}
+    \item 6 \textbf{radial thrusters} (pure force, zero torque),
+    \item 6 \textbf{tangential thrusters} arranged in pairs (pure torque, zero net force).
+\end{itemize}
+
+At runtime, the CoM motion is compensated mathematically by updating the moment arms for each thruster.
+
+\section*{2. Thruster Geometry in Body Frame}
+
+All thrusters are mounted in a \textbf{body-fixed} frame $B$. Their positions and directions never change.
+
+Let $L>0$ be a fixed distance from the origin of the body frame.
+
+\subsection*{2.1 Radial Thrusters (T1--T6): Pure Force, No Torque}
+
+\[
+\begin{aligned}
+\text{T1: } & r_1^B = ( L, 0, 0), & a_1^B = ( 1, 0, 0),\\
+\text{T2: } & r_2^B = (-L, 0, 0), & a_2^B = (-1, 0, 0),\\[4pt]
+\text{T3: } & r_3^B = ( 0, L, 0), & a_3^B = ( 0, 1, 0),\\
+\text{T4: } & r_4^B = ( 0,-L, 0), & a_4^B = ( 0,-1, 0),\\[4pt]
+\text{T5: } & r_5^B = ( 0, 0, L), & a_5^B = ( 0, 0, 1),\\
+\text{T6: } & r_6^B = ( 0, 0,-L), & a_6^B = ( 0, 0,-1).
+\end{aligned}
+\]
+
+These thrusters produce pure forces because $r_i^B \parallel a_i^B$.
+
+\subsection*{2.2 Torque Thrusters (T7--T12): Pure Torque, Zero Net Force}
+
+Three orthogonal torque pairs:
+
+\[
+\begin{aligned}
+\text{T7: }  & r_7^B = (0, L, 0),  & a_7^B   = (0, 0,  1),\\
+\text{T8: }  & r_8^B = (0,-L, 0),  & a_8^B   = (0, 0, -1),\\[4pt]
+\text{T9: }  & r_9^B = (0, 0, L),  & a_9^B   = ( 1, 0, 0),\\
+\text{T10: } & r_{10}^B = (0,0,-L), & a_{10}^B = (-1, 0, 0),\\[4pt]
+\text{T11: } & r_{11}^B = ( L,0,0), & a_{11}^B = (0, 1, 0),\\
+\text{T12: } & r_{12}^B = (-L,0,0), & a_{12}^B = (0,-1, 0).
+\end{aligned}
+\]
+
+Firing each pair with equal magnitude yields zero net force but nonzero torque.
+
+\section*{3. CoM-Dependent Moment Arms}
+
+Let $c^B \in \mathbb{R}^3$ be the \textbf{current center of mass in the body frame}.  
+This point can move as fuel is consumed or loads shift.
+
+The moment arm for thruster $i$ relative to the CoM is:
+\[
+\tilde r_i = r_i^B - c^B.
+\]
+
+\section*{4. Force and Torque Equations}
+
+Let $T_i \ge 0$ be the thrust magnitude of thruster $i$.
+
+Force from thruster $i$:
+\[
+f_i = T_i\, a_i^B.
+\]
+
+Total force:
+\[
+F = \sum_{i=1}^{12} T_i\, a_i^B.
+\]
+
+Torque from thruster $i$:
+\[
+\tau_i = \tilde r_i \times (T_i\, a_i^B).
+\]
+
+Total torque:
+\[
+\tau = \sum_{i=1}^{12} T_i \left( \tilde r_i \times a_i^B \right).
+\]
+
+\section*{5. Wrench Matrix Representation}
+
+Define
+\[
+A = [a_1^B\ \dots\ a_{12}^B] \in \mathbb{R}^{3\times12},
+\]
+\[
+B(c^B) = [\tilde r_1\times a_1^B\ \dots\ \tilde r_{12}\times a_{12}^B] \in \mathbb{R}^{3\times12}.
+\]
+
+Stack thrust vector:
+\[
+T = (T_1,\dots,T_{12})^\top.
+\]
+
+Then:
+\[
+\begin{bmatrix} F \\ \tau \end{bmatrix}
+=
+W(c^B)\,T,
+\qquad
+W(c^B) =
+\begin{bmatrix}
+A\\[4pt]
+B(c^B)
+\end{bmatrix}.
+\]
+
+If $W(c^B)$ has rank $6$, we can generate arbitrary force+torque commands.
+
+\section*{6. Mode 1: Pure Translation (Zero Torque)}
+
+Given a desired force $F_{\text{des}}$ and zero torque:
+\[
+\tau_{\text{des}} = 0,
+\]
+solve:
+\[
+W(c^B)\,T =
+\begin{bmatrix}
+F_{\text{des}}\\[4pt]
+0
+\end{bmatrix},
+\qquad 0 \le T_i \le T_{\max,i}.
+\]
+
+This yields translation in any direction with zero torque, even when CoM shifts.
+
+\section*{7. Mode 2: Pure Rotation (Zero Net Force)}
+
+Given desired torque $\tau_{\text{des}}$ and zero force:
+\[
+F_{\text{des}} = 0,
+\]
+solve:
+\[
+W(c^B)\,T =
+\begin{bmatrix}
+0\\[4pt]
+\tau_{\text{des}}
+\end{bmatrix},
+\qquad 0 \le T_i \le T_{\max,i}.
+\]
+
+This produces rotation about any axis with zero translation for the current CoM.
+
+\section*{8. CoM Adaptation}
+
+When mass shifts:
+
+\begin{enumerate}[label=(\arabic*)]
+\item Measure or estimate new CoM $c^B$.
+\item Recompute moment arms:
+\[
+\tilde r_i = r_i^B - c^B.
+\]
+\item Recompute torque matrix $B(c^B)$.
+\item Resolve the force/torque allocation problem for the new CoM.
+\end{enumerate}
+
+No hardware changes are required.
+
+\section*{9. Summary}
+
+This single 12-thruster configuration:
+
+\begin{itemize}[leftmargin=*]
+    \item Provides full 3D translation: any $F = (F_x,F_y,F_z)$ with $0$ torque,
+    \item Provides full 3D rotation: any $\tau = (\tau_x,\tau_y,\tau_z)$ with $0$ force,
+    \item Works for any CoM location inside the body by updating the moment arms,
+    \item Enables general 6-DOF control by solving $W(c^B)T = (F,\tau)$.
+\end{itemize}
+
+\end{document}

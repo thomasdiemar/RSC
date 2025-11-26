@@ -1,0 +1,131 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath, amssymb, amsfonts, geometry, array, booktabs}
+\geometry{margin=1in}
+
+% --- tiny helpers for status labels ---
+\newcommand{\LB}{\textsf{LB}}   % nonbasic at lower bound
+\newcommand{\UB}{\textsf{UB}}   % nonbasic at upper bound
+\newcommand{\B}{\textsf{B}}     % basic
+\newcommand{\stlabel}[1]{\textit{#1}} % style for status headers
+
+\title{Direct-Bounded Simplex (No Substitution): Full Tableau with LB/UB Status}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Problem}
+Maximize
+\[
+z=3x_1 - x_2
+\]
+subject to
+\[
+\begin{aligned}
+x_1 + 2x_2 + s_1 &= 10,\\
+2x_1 + x_2 + s_2 &= 12,
+\end{aligned}
+\qquad s_1,s_2\ge 0,
+\]
+with bounds
+\[
+\boxed{-3 \le x_1 \le 6},\qquad \boxed{0 \le x_2 \le 5}.
+\]
+
+We will keep \(x_1,x_2\) directly with their bounds inside the simplex. At every step, each variable is either
+\(\B\) (basic), \(\LB\) (nonbasic at lower bound), or \(\UB\) (nonbasic at upper bound).
+
+\section*{Initial bound-feasible point and statuses}
+Choose \(x_1=\!-3\ (\LB),\ x_2=0\ (\LB)\). Then
+\[
+s_1=10-(-3+0)=13,\qquad s_2=12-(-6+0)=18.
+\]
+Status summary: \(x_1:\LB(-3),\ x_2:\LB(0),\ s_1:\B,\ s_2:\B\).
+
+\paragraph{Initial tableau (basis \(\{s_1,s_2\}\), columns \([x_1,\,x_2,\,s_1,\,s_2]\)).}
+\[
+\begin{array}{c|r|rrrr}
+\text{Basic} & \text{RHS} & x_1 & x_2 & s_1 & s_2 \\
+\hline
+s_1 & 13 & 1 & 2 & 1 & 0 \\
+s_2 & 18 & 2 & 1 & 0 & 1 \\
+\hline
+z   & 0  & \mathbf{+3} & \mathbf{-1} & 0 & 0
+\end{array}
+\]
+Reduced costs (maximization rule with bounds):
+\(\;r_{x_1}=+3>0\Rightarrow\) since \(x_1\) is at \LB, \emph{increasing} \(x_1\) is improving.
+\(r_{x_2}=-1<0\Rightarrow\) since \(x_2\) is at \LB, \emph{increasing} \(x_2\) would hurt.
+
+\section*{Ratio test for \(x_1\uparrow\) (include bound distance)}
+Row limits: \(13/1=13,\ 18/2=9\).\quad
+Upper-bound distance for \(x_1\): \(u_1-x_1=6-(-3)=9\).
+Hence
+\[
+\theta=\min(13,\ 9,\ \underline{9})=9,
+\]
+a \emph{tie} between row \(s_2\) and the \emph{upper bound} of \(x_1\).
+
+We can handle this tie in two equivalent ways:
+
+\subsection*{2A. Preemptive slide (no pivot)}
+Move \(x_1\) up by \(9\) directly to its upper bound: \(x_1\gets 6\ (\UB)\), update RHSs:
+\[
+s_1\gets 13-1\cdot 9=4,\qquad s_2\gets 18-2\cdot 9=0.
+\]
+Basis stays \(\{s_1,s_2\}\). Status now:
+\[
+x_1:\UB(6),\quad x_2:\LB(0),\quad s_1:\B(4),\quad s_2:\B(0).
+\]
+Objective value becomes \(z=3\cdot 6 - 0 = 18\).
+No reduced costs change (basis unchanged), and bound-status rules show no improving move remains
+(\(x_1\) at \UB{} would need \(r_{x_1}<0\) to decrease; here \(r_{x_1}>0\)).
+Thus this already certifies optimality.
+
+\subsection*{2B. Pivot at the tied row (canonical update)}
+Alternatively, perform the pivot on the tied row \((s_2,x_1)\) to bring \(x_1\) into the basis and land
+exactly at \(x_1=6\). Divide row \(s_2\) by \(2\) and eliminate \(x_1\) elsewhere.
+
+\[
+\begin{array}{c|r|rrrr}
+\text{Basic} & \text{RHS} & x_1 & x_2 & s_1 & s_2 \\
+\hline
+x_1 & 6 & 1 & 0.5 & 0 & 0.5 \\
+s_1 & 4 & 0 & 1.5 & 1 & 0.5 \\
+\hline
+z   & 18 & 0 & \mathbf{-2.5} & 0 & \mathbf{-1.5}
+\end{array}
+\]
+
+Current (basic) solution from this tableau:
+\[
+x_1=6\ (\B\!=\!\UB),\quad x_2=0\ (\LB),\quad s_1=4,\ s_2=0,\quad z=18.
+\]
+Optimality with bounds:
+- \(x_2\) is \LB{} with \(r_{x_2}=-2.5<0\): increasing \(x_2\) would \emph{decrease} \(z\).
+- \(x_1\) is at its \UB; an improving move would require \(r_{x_1}<0\) to decrease \(x_1\), but \(r_{x_1}=0\) in this canonical row.
+No improving move exists; hence optimal.
+
+\section*{Conclusion}
+The direct-bounded simplex (without substitutions) reaches
+\[
+\boxed{x_1=6,\quad x_2=0,\quad z^*=18}
+\]
+in a single step where the ratio test ties a constraint with the
+\emph{upper bound} of the entering variable. You may record this either as a
+\emph{preemptive slide to the bound} (no pivot) or as a \emph{pivot} that lands at the same bound.
+
+\bigskip
+\noindent\textbf{Sign/ratio rules used (maximization):}
+\begin{itemize}
+  \item If \(x_j\) is \LB: it may \emph{increase} only when \(r_j>0\).
+  \item If \(x_j\) is \UB: it may \emph{decrease} only when \(r_j<0\).
+  \item Ratio test includes the opposite bound of the entering variable:
+    \(\ \theta=\min\{\text{row limits in the allowed direction},\; u_j-x_j\}\) when increasing from \LB;
+    \(\ \theta=\min\{\text{row limits},\; x_j-l_j\}\) when decreasing from \UB.
+  \item If the minimum is a bound distance, you hit that bound:
+        update values and status (\LB/\UB) with \emph{no pivot} unless a row ties; a tied row pivot is also valid.
+\end{itemize}
+
+\end{document}
