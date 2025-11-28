@@ -1,6 +1,6 @@
 using System;
 using LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Model;
-using LinearSolver.Custom.GoalProgramming.Mathematics;
+using LinearSolver;
 
 namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
 {

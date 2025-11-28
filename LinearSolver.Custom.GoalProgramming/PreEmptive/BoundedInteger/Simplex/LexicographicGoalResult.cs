@@ -1,4 +1,4 @@
-using LinearSolver.Custom.GoalProgramming.Mathematics;
+using LinearSolver;
 using System.Collections.Generic;
 using System.Linq;
 

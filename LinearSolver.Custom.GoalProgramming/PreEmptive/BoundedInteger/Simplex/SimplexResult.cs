@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Diagnostics;
 using LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Model;
-using LinearSolver.Custom.GoalProgramming.Mathematics;
+using LinearSolver;
 
 namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
 {
