@@ -3,6 +3,7 @@ using RCS;
 using LinearSolver.Custom;
 using System.Collections.Generic;
 using System.Linq;
+using LinearSolver;
 
 namespace ThrusterOptimizationTests
 {
@@ -19,7 +20,7 @@ namespace ThrusterOptimizationTests
             var engine = new RcsEngine(thrusters);
             var optimiser = new RcsEngineOptimiser<LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex.LexicographicGoalSolver>();
 
-            var command = new RcsCommand(new RcsVector(1, 0, 0), new RcsVector());
+            var command = new RcsCommand(new RcsVector<Fraction>(1, 0, 0), new RcsVector<Fraction>());
             var result = optimiser.Optimise(engine, command).Last().Result;
 
             LogResult("Max Fx", result);
@@ -37,7 +38,7 @@ namespace ThrusterOptimizationTests
             var engine = new RcsEngine(thrusters);
             var optimiser = new RcsEngineOptimiser<LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex.LexicographicGoalSolver>();
 
-            var command = new RcsCommand(new RcsVector(-1, 0, 0), new RcsVector());
+            var command = new RcsCommand(new RcsVector<Fraction>(-1, 0, 0), new RcsVector<Fraction>());
             var result = optimiser.Optimise(engine, command).Last().Result;
 
             LogResult("Min Fx", result);
@@ -55,7 +56,7 @@ namespace ThrusterOptimizationTests
             var engine = new RcsEngine(thrusters);
             var optimiser = new RcsEngineOptimiser<LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex.LexicographicGoalSolver>();
 
-            var command = new RcsCommand(new RcsVector(0, 1, 0), new RcsVector());
+            var command = new RcsCommand(new RcsVector<Fraction>(0, 1, 0), new RcsVector<Fraction>());
             var result = optimiser.Optimise(engine, command).Last().Result;
 
             LogResult("Max Fy", result);
@@ -73,7 +74,7 @@ namespace ThrusterOptimizationTests
             var engine = new RcsEngine(thrusters);
             var optimiser = new RcsEngineOptimiser<LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex.LexicographicGoalSolver>();
 
-            var command = new RcsCommand(new RcsVector(0, -1, 0), new RcsVector());
+            var command = new RcsCommand(new RcsVector<Fraction>(0, -1, 0), new RcsVector<Fraction>());
             var result = optimiser.Optimise(engine, command).Last().Result;
 
             LogResult("Min Fy", result);
@@ -91,7 +92,7 @@ namespace ThrusterOptimizationTests
             var engine = new RcsEngine(thrusters);
             var optimiser = new RcsEngineOptimiser<LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex.LexicographicGoalSolver>();
 
-            var command = new RcsCommand(new RcsVector(0, 0, 1), new RcsVector());
+            var command = new RcsCommand(new RcsVector<Fraction>(0, 0, 1), new RcsVector<Fraction>());
             var result = optimiser.Optimise(engine, command).Last().Result;
 
             LogResult("Max Fz", result);
@@ -109,7 +110,7 @@ namespace ThrusterOptimizationTests
             var engine = new RcsEngine(thrusters);
             var optimiser = new RcsEngineOptimiser<LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex.LexicographicGoalSolver>();
 
-            var command = new RcsCommand(new RcsVector(0, 0, -1), new RcsVector());
+            var command = new RcsCommand(new RcsVector<Fraction>(0, 0, -1), new RcsVector<Fraction>());
             var result = optimiser.Optimise(engine, command).Last().Result;
 
             LogResult("Min Fz", result);
@@ -127,7 +128,7 @@ namespace ThrusterOptimizationTests
             var engine = new RcsEngine(thrusters);
             var optimiser = new RcsEngineOptimiser<LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex.LexicographicGoalSolver>();
 
-            var command = new RcsCommand(new RcsVector(), new RcsVector(1, 0, 0));
+            var command = new RcsCommand(new RcsVector<Fraction>(), new RcsVector<Fraction>(1, 0, 0));
             var result = optimiser.Optimise(engine, command).Last().Result;
 
             LogResult("Max Tx", result);
@@ -143,7 +144,7 @@ namespace ThrusterOptimizationTests
             var engine = new RcsEngine(thrusters);
             var optimiser = new RcsEngineOptimiser<LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex.LexicographicGoalSolver>();
 
-            var command = new RcsCommand(new RcsVector(), new RcsVector(-1, 0, 0));
+            var command = new RcsCommand(new RcsVector<Fraction>(), new RcsVector<Fraction>(-1, 0, 0));
             var result = optimiser.Optimise(engine, command).Last().Result;
 
             LogResult("Min Tx", result);
@@ -159,7 +160,7 @@ namespace ThrusterOptimizationTests
             var engine = new RcsEngine(thrusters);
             var optimiser = new RcsEngineOptimiser<LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex.LexicographicGoalSolver>();
 
-            var command = new RcsCommand(new RcsVector(), new RcsVector(0, 1, 0));
+            var command = new RcsCommand(new RcsVector<Fraction>(), new RcsVector<Fraction>(0, 1, 0));
             var result = optimiser.Optimise(engine, command).Last().Result;
 
             LogResult("Max Ty", result);
@@ -175,7 +176,7 @@ namespace ThrusterOptimizationTests
             var engine = new RcsEngine(thrusters);
             var optimiser = new RcsEngineOptimiser<LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex.LexicographicGoalSolver>();
 
-            var command = new RcsCommand(new RcsVector(), new RcsVector(0, -1, 0));
+            var command = new RcsCommand(new RcsVector<Fraction>(), new RcsVector<Fraction>(0, -1, 0));
             var result = optimiser.Optimise(engine, command).Last().Result;
 
             LogResult("Min Ty", result);
@@ -191,7 +192,7 @@ namespace ThrusterOptimizationTests
             var engine = new RcsEngine(thrusters);
             var optimiser = new RcsEngineOptimiser<LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex.LexicographicGoalSolver>();
 
-            var command = new RcsCommand(new RcsVector(), new RcsVector(0, 0, 1));
+            var command = new RcsCommand(new RcsVector<Fraction>(), new RcsVector<Fraction>(0, 0, 1));
             var result = optimiser.Optimise(engine, command).Last().Result;
 
             LogResult("Max Tz", result);
@@ -207,7 +208,7 @@ namespace ThrusterOptimizationTests
             var engine = new RcsEngine(thrusters);
             var optimiser = new RcsEngineOptimiser<LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex.LexicographicGoalSolver>();
 
-            var command = new RcsCommand(new RcsVector(), new RcsVector(0, 0, -1));
+            var command = new RcsCommand(new RcsVector<Fraction>(), new RcsVector<Fraction>(0, 0, -1));
             var result = optimiser.Optimise(engine, command).Last().Result;
 
             LogResult("Min Tz", result);

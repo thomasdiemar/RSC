@@ -6,7 +6,6 @@ using LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Model;
 using LinearSolver.Custom.GoalProgramming.Mathematics;
 
 //codex resume 019aad7c-0210-76f0-bafb-7c4851ccb64f
-
 namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
 {
     /// <summary>
@@ -56,7 +55,7 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
         /// <summary>
         /// Entry point for the shared solver interface. Builds a tableau from the coefficient matrix and streams solution progress.
         /// </summary>
-        public virtual IEnumerable<MyProgress<double[]>> Solve(double[,] coefficients, double[] constants)
+        public virtual IEnumerable<MyProgress<Fraction[]>> Solve(Fraction[,] coefficients, Fraction[] constants)
         {
             if (coefficients == null) throw new ArgumentNullException(nameof(coefficients));
             if (constants == null) throw new ArgumentNullException(nameof(constants));
@@ -73,7 +72,7 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
 
             foreach (var snapshot in SolveTableauProgressively(tableau))
             {
-                var output = new double[columnCount];
+                var output = new Fraction[columnCount];
                 var stageSolution = snapshot.Result?.StageResults?.LastOrDefault()?.Solution;
                 if (stageSolution != null)
                 {
@@ -83,7 +82,7 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                     }
                 }
 
-                yield return new MyProgress<double[]>
+                yield return new MyProgress<Fraction[]>
                 {
                     Result = output,
                     Done = snapshot.Done
@@ -91,7 +90,7 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             }
         }
 
-        private PreEmptiveIntegerTableau BuildTableau(double[,] coefficients, double[] constants)
+        private PreEmptiveIntegerTableau BuildTableau(Fraction[,] coefficients, Fraction[] constants)
         {
             if (coefficients == null)
             {
@@ -156,20 +155,21 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             return tableau;
         }
 
-        private static Fraction ToFraction(double value)
+        private static Fraction ToFraction(Fraction value)
         {
-            const int scale = 1000000;
-            if (double.IsNaN(value))
-            {
-                return new Fraction(0);
-            }
+            return value;
+            //const int scale = 1000000;
+            //if (double.IsNaN(value))
+            //{
+            //    return new Fraction(0);
+            //}
 
-            if (double.IsInfinity(value))
-            {
-                throw new ArgumentOutOfRangeException(nameof(value), "Coefficients and constants must be finite.");
-            }
+            //if (double.IsInfinity(value))
+            //{
+            //    throw new ArgumentOutOfRangeException(nameof(value), "Coefficients and constants must be finite.");
+            //}
 
-            return new Fraction((int)Math.Round(value * scale), scale);
+            //return new Fraction((int)Math.Round(value * scale), scale);
         }
 
         public virtual IEnumerable<Progress> SolveTableauProgressively(PreEmptiveIntegerTableau tableau)

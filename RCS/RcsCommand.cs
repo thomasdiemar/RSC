@@ -1,16 +1,18 @@
+using LinearSolver;
+
 namespace RCS
 {
     public struct RcsCommand
     {
-        public RcsVector DesiredForce { get; set; }
-        public RcsVector DesiredTorque { get; set; }
+        public RcsVector<Fraction> DesiredForce { get; set; }
+        public RcsVector<Fraction> DesiredTorque { get; set; }
 
         public bool AllowNonCommandedForces { get; set; }
         public bool AllowNonCommandedTorques { get; set; }
 
         public RcsCommand(
-            RcsVector desiredForce,
-            RcsVector desiredTorque,
+            RcsVector<Fraction> desiredForce,
+            RcsVector<Fraction> desiredTorque,
             bool allowNonCommandedForces = false,
             bool allowNonCommandedTorques = false)
         {

@@ -8,6 +8,6 @@ namespace LinearSolver
         /// <summary>
         /// Solve a bounded linear system and emit progress snapshots of the current solution.
         /// </summary>
-        IEnumerable<MyProgress<double[]>> Solve(double[,] coefficients, double[] constants);
+        IEnumerable<MyProgress<Fraction[]>> Solve(Fraction[,] coefficients, Fraction[] constants);
     }
 }

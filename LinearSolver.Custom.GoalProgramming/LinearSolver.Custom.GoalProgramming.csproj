@@ -42,7 +42,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Mathematics\Fraction.cs" />
-    <Compile Include="GoalProgrammingSolver.cs" />
     <Compile Include="PreEmptive\BoundedInteger\Diagnostics\SimplexDiagnostics.cs" />
     <Compile Include="PreEmptive\BoundedInteger\Model\BoundedIntegerVariable.cs" />
     <Compile Include="PreEmptive\BoundedInteger\Model\GoalDefinition.cs" />

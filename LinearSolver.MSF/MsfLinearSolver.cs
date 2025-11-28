@@ -56,7 +56,7 @@ namespace LinearSolver.MSF
         /// <summary>
         /// Emit setup, constraint, and final snapshots for the hard-equality solver.
         /// </summary>
-        public IEnumerable<MyProgress<double[]>> Solve(double[,] coefficients, double[] constants)
+        public IEnumerable<MyProgress<Fraction[]>> Solve(Fraction[,] coefficients, Fraction[] constants)
         {
             if (coefficients == null)
                 throw new ArgumentNullException(nameof(coefficients));
@@ -85,8 +85,8 @@ namespace LinearSolver.MSF
             {
                 Term lhs = 0;
                 for (int col = 0; col < cols; col++)
-                    lhs += coefficients[row, col] * decisions[col];
-                model.AddConstraint($"Eq_{row}", lhs == constants[row]);
+                    lhs += coefficients[row, col].ToDouble() * decisions[col];
+                model.AddConstraint($"Eq_{row}", lhs == constants[row].ToDouble());
                 yield return MsfProgressFactory.CreateProgress(MsfProgressFactory.Project(decisions, solved: false));
             }
 
@@ -184,7 +184,7 @@ namespace LinearSolver.MSF
         /// <summary>
         /// Emit granular snapshots during goal setup and after solving.
         /// </summary>
-        public IEnumerable<MyProgress<double[]>> Solve(double[,] coefficients, double[] constants)
+        public IEnumerable<MyProgress<Fraction[]>> Solve(Fraction[,] coefficients, Fraction[] constants)
         {
             if (coefficients == null)
                 throw new ArgumentNullException(nameof(coefficients));
@@ -216,7 +216,7 @@ namespace LinearSolver.MSF
             {
                 Term lhs = 0;
                 for (int col = 0; col < cols; col++)
-                    lhs += coefficients[row, col] * decisions[col];
+                    lhs += coefficients[row, col].ToDouble() * decisions[col];
 
                 if (double.IsNaN(constants[row]))
                     continue;
@@ -226,7 +226,7 @@ namespace LinearSolver.MSF
                 else if (constants[row] < 0)
                     model.AddGoal($"Min_{row}", GoalKind.Minimize, lhs);
                 else
-                    model.AddConstraint($"Eq_{row}", lhs == constants[row]);
+                    model.AddConstraint($"Eq_{row}", lhs == constants[row].ToDouble());
 
                 yield return Snapshot(decisions, solved: false);
             }
@@ -239,7 +239,7 @@ namespace LinearSolver.MSF
 
                 Term lhs = 0;
                 for (int col = 0; col < cols; col++)
-                    lhs += coefficients[row, col] * decisions[col];
+                    lhs += coefficients[row, col].ToDouble() * decisions[col];
 
                 var absVar = new Decision(Domain.RealNonnegative, $"abs_{row}");
                 model.AddDecision(absVar);
@@ -261,14 +261,14 @@ namespace LinearSolver.MSF
 
             context.Solve();
 
-            var final = new double[cols];
+            var final = new Fraction[cols];
             for (int i = 0; i < cols; i++)
-                final[i] = decisions[i].ToDouble();
+                final[i] = new Fraction((decimal)decisions[i].ToDouble(), 1);
 
             yield return MsfProgressFactory.CreateProgress(final);
         }
 
-        private static MyProgress<double[]> Snapshot(Decision[] decisions, bool solved)
+        private static MyProgress<Fraction[]> Snapshot(Decision[] decisions, bool solved)
         {
             var values = MsfProgressFactory.Project(decisions, solved);
 
@@ -278,22 +278,22 @@ namespace LinearSolver.MSF
 
     internal static class MsfProgressFactory
     {
-        public static LinearSolver.MyProgress<double[]> CreateProgress(double[] snapshot)
+        public static LinearSolver.MyProgress<Fraction[]> CreateProgress(Fraction[] snapshot)
         {
-            return new LinearSolver.MyProgress<double[]>
+            return new LinearSolver.MyProgress<Fraction[]>
             {
-                Result = (double[])snapshot.Clone(),
+                Result = (Fraction[])snapshot.Clone(),
                 Done = true
             };
         }
 
-        public static double[] Project(Decision[] decisions, bool solved)
+        public static Fraction[] Project(Decision[] decisions, bool solved)
         {
-            var values = new double[decisions.Length];
+            var values = new Fraction[decisions.Length];
             if (solved)
             {
                 for (int i = 0; i < decisions.Length; i++)
-                    values[i] = decisions[i].ToDouble();
+                    values[i] = new Fraction((decimal)decisions[i].ToDouble(), 1);
             }
             else
             {
