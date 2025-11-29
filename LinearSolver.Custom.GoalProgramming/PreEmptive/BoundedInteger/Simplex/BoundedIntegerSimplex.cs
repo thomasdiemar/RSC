@@ -49,8 +49,6 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             var diagnostics = new SimplexDiagnostics(priorityLevel);
             ValidateVariables(tableau);
 
-            var constraintRows = new List<int>();
-            var constraintValues = new List<double>();
             var targetRows = new List<int>();
             var allRightHandSides = new double[tableau.RowCount];
             var allTolerances = new double[tableau.RowCount];
@@ -62,6 +60,28 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 allTolerances[r] = (double)tableau.RowGoals[r].Tolerance;
             }
 
+            // Collect locked constraints from already-solved lower priorities
+            var lockedConstraints = new List<int>();
+            var lockedValues = new List<double>();
+
+            for (int r = 0; r < tableau.RowCount; r++)
+            {
+                var goal = tableau.RowGoals[r];
+
+                // Check if this is a locked goal from a previous priority
+                if (goal.Priority < priorityLevel && goal.Name.EndsWith("_Lock"))
+                {
+                    double lockedValue = (double)goal.RightHandSide;
+                    lockedConstraints.Add(r);
+                    lockedValues.Add(lockedValue);
+                    Console.WriteLine($"[SolvePriority] Priority {priorityLevel} includes locked constraint from Priority {goal.Priority}: row {r} = {lockedValue}");
+                }
+            }
+
+            // Initialize constraints with locked goals from previous priorities
+            var constraintRows = new List<int>(lockedConstraints);
+            var constraintValues = new List<double>(lockedValues);
+
             for (int r = 0; r < tableau.RowCount; r++)
             {
                 var goal = tableau.RowGoals[r];
@@ -71,10 +91,12 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 }
 
                 bool isSoft = goal.Tolerance >= Fraction.MaxValue - Fraction.Epsilon;
+                Console.WriteLine($"[SolvePriority] Row {r}: priority={goal.Priority}, tolerance={(double)goal.Tolerance:F0}, MaxValue={(double)Fraction.MaxValue:F0}, Epsilon={(double)Fraction.Epsilon:F12}, isSoft={isSoft}");
                 var rhs = (double)goal.RightHandSide;
 
                 if (isSoft)
                 {
+                    Console.WriteLine($"[SolvePriority] Adding row {r} to softRows");
                     softRows.Add(r);
                     continue;
                 }
@@ -96,8 +118,10 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             var originalConstraintRows = new List<int>(constraintRows);
             var originalConstraintValues = new List<double>(constraintValues);
 
+            // Note: constraintRows includes locked goals from previous priorities (Step 3)
             if (targetRows.Count == 0 && constraintRows.Count == 0)
             {
+                // No objectives and no constraints → return default solution
                 diagnostics.SetFinalStates(tableau.ColumnHeaders);
                 return new SimplexResult(SimplexStatus.Optimal, objectiveValue, diagnostics, tableau.ColumnHeaders.Select(v => v.Clone()).ToList());
             }
@@ -124,7 +148,12 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 }
             }
 
-            var feasible = SolveEnumerating(coefficients, constraintRows, constraintValues, targetRow, targetSign, allRightHandSides, allTolerances, softRows, minimizeThrust: false);
+            // For priorities with only soft goals (no hard target), minimize unintended deviations
+            bool shouldMinimizeSoft = (targetRow < 0 && softRows.Count > 0);
+            Console.WriteLine($"[SolvePriority] Calling SolveEnumerating: priority={priorityLevel}, constraintRows.Count={constraintRows.Count} (including {lockedConstraints.Count} locked), targetRow={targetRow}, shouldMinimizeSoft={shouldMinimizeSoft}");
+            var feasible = SolveEnumerating(coefficients, constraintRows, constraintValues, targetRow, targetSign, allRightHandSides, allTolerances, softRows, minimizeThrust: shouldMinimizeSoft);
+            Console.WriteLine($"[SolvePriority] feasible solution: {(feasible == null ? "null" : string.Join(", ", feasible.Select((v, i) => $"x{i}={v:F3}")))}");
+
             if (feasible == null)
             {
                 return CreateResult(SimplexStatus.GoalViolation, objectiveValue, diagnostics, tableau);
@@ -140,10 +169,10 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             // Phase 2: lock achieved target and minimise soft penalties/thrust.
             if (targetRow >= 0)
             {
-                var lockedConstraints = new List<int>(originalConstraintRows) { targetRow };
-                var lockedValues = new List<double>(originalConstraintValues) { (double)objectiveValue / targetSign };
+                var phase2Constraints = new List<int>(originalConstraintRows) { targetRow };
+                var phase2Values = new List<double>(originalConstraintValues) { (double)objectiveValue / targetSign };
                 // Secondary: minimize unintended axes + thrust (no target objective).
-                var refined = SolveEnumerating(coefficients, lockedConstraints, lockedValues, targetRow: -1, targetSign: 1, allRightHandSides: allRightHandSides, allTolerances: allTolerances, softRows, minimizeThrust: true);
+                var refined = SolveEnumerating(coefficients, phase2Constraints, phase2Values, targetRow: -1, targetSign: 1, allRightHandSides: allRightHandSides, allTolerances: allTolerances, softRows, minimizeThrust: true);
                 if (refined != null)
                 {
                     solution = refined;
@@ -450,6 +479,8 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             double bestScore = double.NegativeInfinity;
             double[] best = null;
 
+            Console.WriteLine($"[SearchFeasible] cols={cols}, constraintCount={constraintCount}, targetRow={targetRow}, minimizeThrust={minimizeThrust}");
+
             if (cols <= 16)
             {
                 int totalMasks = 1 << cols;
@@ -482,8 +513,12 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                     hasGoodObjective = Math.Abs(obj) > 1e-9;
                 }
 
-                if (best != null && bestScore > double.NegativeInfinity / 2 && hasGoodObjective)
+                Console.WriteLine($"[SearchFeasible] Binary search: best={(best == null ? "null" : string.Join(",", best.Select(v => $"{v:F2}")))} score={bestScore:F6}");
+
+                // When minimizing soft goals, don't return early - continue to try least squares for better solutions
+                if (best != null && bestScore > double.NegativeInfinity / 2 && hasGoodObjective && !minimizeThrust)
                 {
+                    Console.WriteLine($"[SearchFeasible] Returning early from binary search");
                     return best;
                 }
             }
@@ -494,6 +529,7 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 if (exact != null)
                 {
                     var exactScore = ScoreCandidate(coefficients, constraintRows, constraintValues, targetRow, targetSign, softSet, constraintSet, rows, minimizeThrust, exact);
+                    Console.WriteLine($"[SearchFeasible] SolveEqualitySystem: score={exactScore.Score:F6}");
                     if (exactScore.Score > bestScore + 1e-9)
                     {
                         bestScore = exactScore.Score;
@@ -505,6 +541,7 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 if (lsCandidate != null)
                 {
                     var score = ScoreCandidate(coefficients, constraintRows, constraintValues, targetRow, targetSign, softSet, constraintSet, rows, minimizeThrust, lsCandidate);
+                    Console.WriteLine($"[SearchFeasible] SolveLeastSquares: candidate={string.Join(",", lsCandidate.Select(v => $"{v:F2}"))} score={score.Score:F6}");
 
                     // Only update if better, unless we're in minimizeThrust mode and need any feasible solution
                     if (score.Score > bestScore + 1e-9 || (minimizeThrust && score.Score > double.NegativeInfinity))
@@ -515,6 +552,7 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
 
                     if (minimizeThrust && score.Score > double.NegativeInfinity)
                     {
+                        Console.WriteLine($"[SearchFeasible] Returning with LS solution");
                         return best;
                     }
                 }
@@ -547,14 +585,23 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 valueLookup[constraintRows[i]] = constraintValues[i];
             }
 
+            Console.WriteLine($"[SearchFeasible] Starting choose-and-fix enumeration: cols={cols}, constraintCount={constraintCount}, bestScore={bestScore:F6}");
             var variables = Enumerable.Range(0, cols).ToArray();
             var freeCombos = Choose(variables, constraintCount);
+            Console.WriteLine($"[SearchFeasible] freeCombos count: {freeCombos.Count()}");
+
+            int comboIndex = 0;
+            int nullSolutionCount = 0;
+            int outOfBoundsCount = 0;
+            int validSolutionCount = 0;
 
             foreach (var free in freeCombos)
             {
                 var freeSet = new HashSet<int>(free);
                 var fixedVars = variables.Where(v => !freeSet.Contains(v)).ToArray();
                 int assignmentCount = 1 << fixedVars.Length;
+                if (comboIndex < 2) Console.WriteLine($"[SearchFeasible] Combo {comboIndex}: free={string.Join(",", free)}, fixedVars.Length={fixedVars.Length}, assignmentCount={assignmentCount}");
+                comboIndex++;
 
                 var freeList = free.ToArray();
                 var constraintMatrix = new double[constraintCount, constraintCount];
@@ -587,6 +634,7 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                     var freeSolution = SolveLinearSystem(constraintMatrix, rhs, eps);
                     if (freeSolution == null)
                     {
+                        nullSolutionCount++;
                         continue;
                     }
 
@@ -612,47 +660,30 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
 
                     if (!withinBounds)
                     {
+                        outOfBoundsCount++;
                         continue;
                     }
 
-                    double penalty = 0;
-                    for (int r = 0; r < constraintRows.Count; r++)
+                    validSolutionCount++;
+
+                    var scoreResult = ScoreCandidate(coefficients, constraintRows, constraintValues, targetRow, targetSign, softSet, constraintSet, rows, minimizeThrust, candidate);
+
+                    if (validSolutionCount <= 5)
                     {
-                        double actual = EvaluateRow(coefficients, constraintRows[r], candidate);
-                        penalty += Math.Abs(actual - valueLookup[constraintRows[r]]);
+                        Console.WriteLine($"[SearchFeasible] Solution {validSolutionCount}: score={scoreResult.Score:F6}, thrust={candidate.Sum():F2}, bestScore={bestScore:F6}");
                     }
 
-                    double objective = 0;
-                    if (targetRow >= 0)
+                    if (scoreResult.Score > bestScore + 1e-9)
                     {
-                        objective = targetSign * EvaluateRow(coefficients, targetRow, candidate);
-                    }
-
-                    double unintendedPenalty = 0;
-                    for (int r = 0; r < rows; r++)
-                    {
-                        if (r == targetRow || constraintSet.Contains(r))
-                        {
-                            continue;
-                        }
-
-                        double deviation = EvaluateRow(coefficients, r, candidate);
-                        double weight = softSet.Contains(r) ? 1_000_000.0 : 1_000_000.0;
-                        unintendedPenalty += weight * Math.Abs(deviation);
-                    }
-
-                    double thrust = candidate.Sum();
-                    double score = minimizeThrust
-                        ? -1_000_000.0 * penalty - 1_000.0 * unintendedPenalty - thrust
-                        : objective - 1_000_000.0 * penalty - 1_000.0 * unintendedPenalty - 1e-3 * thrust;
-
-                    if (score > bestScore + 1e-9)
-                    {
-                        bestScore = score;
-                        best = candidate;
+                        Console.WriteLine($"[SearchFeasible] New best! combo={comboIndex-1}, mask={mask}, score={scoreResult.Score:F6} (was {bestScore:F6}), thrust={candidate.Sum():F2}");
+                        Console.WriteLine($"[SearchFeasible] Solution: {string.Join(",", candidate.Select((v, i) => v > 1e-6 ? $"x{i}={v:F3}" : "").Where(s => s != ""))}");
+                        bestScore = scoreResult.Score;
+                        best = scoreResult.Solution;
                     }
                 }
             }
+
+            Console.WriteLine($"[SearchFeasible] Choose-and-fix summary: {validSolutionCount} valid, {nullSolutionCount} null, {outOfBoundsCount} out-of-bounds, total={validSolutionCount + nullSolutionCount + outOfBoundsCount}");
 
             // If we have an overdetermined system (more constraints than variables) and haven't found a good solution,
             // try to solve for the constraints and then maximize the objective
@@ -691,6 +722,7 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             // Need to maximize objective among infinitely many feasible solutions
             if (cols > constraintCount && targetRow >= 0 && (best == null || Math.Abs(currentObjective) < 1e-9))
             {
+                Console.WriteLine($"[SearchFeasible] Trying SolveUnderdeterminedSystem with targetRow={targetRow}");
                 var underdeterminedSolution = SolveUnderdeterminedSystem(
                     coefficients, constraintRows, constraintValues, targetRow, targetSign,
                     cols, constraintCount, eps);
@@ -698,6 +730,7 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 {
                     var score = ScoreCandidate(coefficients, constraintRows, constraintValues,
                         targetRow, targetSign, softSet, constraintSet, rows, minimizeThrust, underdeterminedSolution);
+                    Console.WriteLine($"[SearchFeasible] SolveUnderdeterminedSystem: score={score.Score:F6}");
                     if (score.Score > bestScore + 1e-9)
                     {
                         bestScore = score.Score;
@@ -706,6 +739,93 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 }
             }
 
+            // Try active set QP solver for underdetermined systems with soft goals
+            // Only call QP if choose-and-fix found a solution - QP may find better fractional solution
+            if (cols > constraintCount && minimizeThrust && softSet.Count > 0 && best != null)
+            {
+                Console.WriteLine($"[SearchFeasible] Trying active set QP solver to improve solution");
+
+                // Build soft goal matrix
+                var softRowsList = softRows.ToList();
+                var A_soft = new double[softRowsList.Count, cols];
+                for (int i = 0; i < softRowsList.Count; i++)
+                {
+                    int row = softRowsList[i];
+                    for (int j = 0; j < cols; j++)
+                    {
+                        A_soft[i, j] = coefficients[row, j];
+                    }
+                }
+
+                // Build equality constraint matrix
+                var A_eq = new double[constraintCount, cols];
+                var b_eq = new double[constraintCount];
+                for (int i = 0; i < constraintCount; i++)
+                {
+                    int row = constraintRows[i];
+                    b_eq[i] = constraintValues[i];
+                    for (int j = 0; j < cols; j++)
+                    {
+                        A_eq[i, j] = coefficients[row, j];
+                    }
+                }
+
+                // Bounds
+                var lower = new double[cols];
+                var upper = new double[cols];
+                for (int j = 0; j < cols; j++)
+                {
+                    lower[j] = 0.0;
+                    upper[j] = 1.0;
+                }
+
+                // Initial solution - spread load evenly across all variables that can contribute
+                var x0 = new double[cols];
+                if (best != null)
+                {
+                    Array.Copy(best, x0, cols);
+                }
+
+                // Improve initial guess by distributing evenly across all variables
+                // This helps QP solver explore the solution space better
+                double totalLoad = 0;
+                for (int j = 0; j < cols; j++)
+                    totalLoad += x0[j];
+
+                if (totalLoad < 0.01)  // If near zero, initialize with uniform distribution
+                {
+                    // Compute how much each variable needs to contribute to satisfy constraint
+                    double avgContribution = 0;
+                    for (int i = 0; i < constraintCount; i++)
+                    {
+                        avgContribution += Math.Abs(b_eq[i]);
+                    }
+                    avgContribution /= (cols * Math.Max(1, constraintCount));
+
+                    for (int j = 0; j < cols; j++)
+                    {
+                        x0[j] = Math.Min(0.5, avgContribution);  // Start at mid-range
+                    }
+
+                    Console.WriteLine($"[SearchFeasible] QP: Using uniform initial guess with avg={avgContribution:F3}");
+                }
+
+                var qpSolution = SolveBoundedConstrainedLeastSquares(A_soft, A_eq, b_eq, lower, upper, x0, eps);
+                if (qpSolution != null)
+                {
+                    var score = ScoreCandidate(coefficients, constraintRows, constraintValues,
+                        targetRow, targetSign, softSet, constraintSet, rows, minimizeThrust, qpSolution);
+                    Console.WriteLine($"[SearchFeasible] Active set QP: score={score.Score:F6}, solution={string.Join(",", qpSolution.Select(v => v > 1e-6 ? $"{v:F3}" : "0"))}");
+                    if (score.Score > bestScore + 1e-9)
+                    {
+                        Console.WriteLine($"[SearchFeasible] QP solution is better! (was {bestScore:F6})");
+                        bestScore = score.Score;
+                        best = score.Solution;
+                    }
+                }
+            }
+
+            Console.WriteLine($"[SearchFeasible] Returning final: best={(best == null ? "null" : string.Join(",", best.Select(v => $"{v:F2}")))} score={bestScore:F6}");
             return best;
         }
 
@@ -818,6 +938,7 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
 
             double[] bestSolution = null;
             double bestObjective = double.NegativeInfinity;
+            double bestThrust = double.PositiveInfinity;
 
             // Get objective coefficients
             var objCoeffs = new double[cols];
@@ -827,34 +948,6 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             }
 
             // Strategy: Try fixing different subsets of variables to maximize the objective
-            // Since we have more degrees of freedom, prioritize variables with positive objective coefficients
-
-            // First, try a greedy approach: set variables with positive objective coefficients to 1
-            var greedy = new double[cols];
-            for (int j = 0; j < cols; j++)
-            {
-                greedy[j] = objCoeffs[j] > 0 ? 1.0 : 0.0;
-            }
-
-            // Project onto constraint manifold
-            double bestThrust = double.PositiveInfinity;
-            var greedySolution = ProjectOntoConstraints(A, b, greedy, cols, m, eps);
-            if (greedySolution != null)
-            {
-                double obj = 0;
-                for (int j = 0; j < cols; j++)
-                {
-                    obj += objCoeffs[j] * greedySolution[j];
-                }
-                double thrust = greedySolution.Sum();
-                if (obj > bestObjective)
-                {
-                    bestObjective = obj;
-                    bestThrust = thrust;
-                    bestSolution = greedySolution;
-                }
-            }
-
             // Try different combinations of fixed variables (limit search to avoid explosion)
             // For 6 variables, 4^6 = 4096 combinations
             int maxCombos = Math.Min(1 << (cols * 2), 10000);
@@ -897,74 +990,6 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
         /// <summary>
         /// Project a point onto the constraint manifold A*x = b.
         /// </summary>
-        private static double[] ProjectOntoConstraints(double[,] A, double[] b, double[] initial, int n, int m, double eps)
-        {
-            // Use least squares: minimize ||x - initial||^2 subject to A*x = b
-            // Lagrangian: L = ||x - initial||^2 + lambda^T (A*x - b)
-            // Optimality: 2(x - initial) + A^T*lambda = 0, A*x = b
-            // => x = initial - 0.5*A^T*lambda, A*x = b
-            // => A*initial - 0.5*A*A^T*lambda = b
-            // => lambda = 2*(A*A^T)^{-1}*(A*initial - b)
-
-            var aat = new double[m, m];
-            var rhs = new double[m];
-
-            // Compute A*A^T and A*initial - b
-            for (int i = 0; i < m; i++)
-            {
-                rhs[i] = -b[i];
-                for (int j = 0; j < n; j++)
-                {
-                    rhs[i] += A[i, j] * initial[j];
-                }
-
-                for (int k = 0; k < m; k++)
-                {
-                    for (int j = 0; j < n; j++)
-                    {
-                        aat[i, k] += A[i, j] * A[k, j];
-                    }
-                }
-            }
-
-            // Add regularization
-            for (int i = 0; i < m; i++)
-            {
-                aat[i, i] += eps;
-            }
-
-            var lambda = SolveLinearSystem(aat, rhs, eps);
-            if (lambda == null) return null;
-
-            // Compute x = initial - 0.5*A^T*lambda
-            var result = new double[n];
-            for (int j = 0; j < n; j++)
-            {
-                result[j] = initial[j];
-                for (int i = 0; i < m; i++)
-                {
-                    result[j] -= 0.5 * A[i, j] * lambda[i];
-                }
-                result[j] = Math.Max(0, Math.Min(1.0, result[j]));
-            }
-
-            // Verify constraints
-            for (int i = 0; i < m; i++)
-            {
-                double val = 0;
-                for (int j = 0; j < n; j++)
-                {
-                    val += A[i, j] * result[j];
-                }
-                if (Math.Abs(val - b[i]) > 1e-4)
-                {
-                    return null;
-                }
-            }
-
-            return result;
-        }
-
         private static double[] TrySolveWithFixedVariables(double[,] A, double[] b, int[] fixedMask, int n, int m, double eps)
         {
             // fixedMask[j]: 0=free, 1=fix to 0, 2=fix to 1, 3=try both
@@ -1094,6 +1119,301 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             }
 
             return solution;
+        }
+
+        /// <summary>
+        /// Solves bounded constrained least squares: min ||A_soft * x||² subject to A_eq * x = b_eq, lower ≤ x ≤ upper
+        /// Uses active set method for quadratic programming with bounds.
+        /// </summary>
+        private static double[] SolveBoundedConstrainedLeastSquares(
+            double[,] A_soft,      // Soft goal matrix (m_soft × n)
+            double[,] A_eq,        // Equality constraint matrix (m_eq × n)
+            double[] b_eq,         // Equality constraint RHS (m_eq)
+            double[] lower,        // Lower bounds (n)
+            double[] upper,        // Upper bounds (n)
+            double[] x0,           // Initial feasible solution (n)
+            double eps,
+            int maxIterations = 100)
+        {
+            int n = A_soft.GetLength(1);  // Number of variables
+            int m_soft = A_soft.GetLength(0);  // Number of soft goals
+            int m_eq = A_eq.GetLength(0);  // Number of equality constraints
+
+            // Active Set QP solver for soft goal minimization
+
+            // Build H = A_soft^T * A_soft (objective Hessian)
+            var H = new double[n, n];
+            for (int i = 0; i < n; i++)
+            {
+                for (int j = 0; j < n; j++)
+                {
+                    double sum = 0;
+                    for (int k = 0; k < m_soft; k++)
+                    {
+                        sum += A_soft[k, i] * A_soft[k, j];
+                    }
+                    H[i, j] = sum;
+                }
+            }
+
+            // c = 0 (no linear term for min ||A*x||²)
+            var c = new double[n];
+
+            // Active set: tracks which bounds are active
+            // 0 = free, 1 = at lower bound, 2 = at upper bound
+            var activeSet = new int[n];
+            var x = new double[n];
+            Array.Copy(x0, x, n);
+
+            // Initialize active set based on x0 to avoid alpha=0 issues
+            for (int i = 0; i < n; i++)
+            {
+                if (Math.Abs(x[i] - lower[i]) < eps)
+                    activeSet[i] = 1;  // At lower bound
+                else if (Math.Abs(x[i] - upper[i]) < eps)
+                    activeSet[i] = 2;  // At upper bound
+                else
+                    activeSet[i] = 0;  // Free
+            }
+
+            for (int iter = 0; iter < maxIterations; iter++)
+            {
+                // Step 1: Solve equality-constrained QP with current active set
+                var result = SolveEqualityConstrainedQP(H, c, A_eq, b_eq, activeSet, lower, upper, x, n, m_eq, eps);
+                if (result.Item1 == null)
+                {
+                    break;
+                }
+
+                var p = result.Item1;  // Search direction
+                var lambda = result.Item2;  // Lagrange multipliers for active bounds
+
+                // Step 2: Check if we're at optimum (p ≈ 0 and all lambda ≥ 0)
+                double pNorm = 0;
+                for (int i = 0; i < n; i++)
+                    pNorm += p[i] * p[i];
+                pNorm = Math.Sqrt(pNorm);
+
+                if (pNorm < eps)
+                {
+                    // Check Lagrange multipliers
+                    int worstIdx = -1;
+                    double worstLambda = 0;
+                    for (int i = 0; i < n; i++)
+                    {
+                        if (activeSet[i] > 0 && lambda[i] < worstLambda)
+                        {
+                            worstLambda = lambda[i];
+                            worstIdx = i;
+                        }
+                    }
+
+                    if (worstIdx < 0 || worstLambda > -eps)
+                    {
+                        // Optimal solution found
+                        return x;
+                    }
+
+                    // Remove most negative multiplier from active set
+                    activeSet[worstIdx] = 0;
+                    continue;
+                }
+
+                // Step 3: Line search - find maximum step that maintains feasibility
+                double alpha = 1.0;
+                int blockingIdx = -1;
+                int blockingType = 0;
+
+                for (int i = 0; i < n; i++)
+                {
+                    if (activeSet[i] > 0) continue;  // Already active
+
+                    if (p[i] < -eps)
+                    {
+                        // Moving towards lower bound
+                        double alphaToBound = (lower[i] - x[i]) / p[i];
+                        if (alphaToBound < alpha)
+                        {
+                            alpha = alphaToBound;
+                            blockingIdx = i;
+                            blockingType = 1;
+                        }
+                    }
+                    else if (p[i] > eps)
+                    {
+                        // Moving towards upper bound
+                        double alphaToBound = (upper[i] - x[i]) / p[i];
+                        if (alphaToBound < alpha)
+                        {
+                            alpha = alphaToBound;
+                            blockingIdx = i;
+                            blockingType = 2;
+                        }
+                    }
+                }
+
+                // Step 4: Take step
+                for (int i = 0; i < n; i++)
+                {
+                    x[i] += alpha * p[i];
+                }
+
+                // Step 5: Add blocking constraint to active set (only if we made meaningful progress)
+                if (blockingIdx >= 0 && alpha > eps)
+                {
+                    activeSet[blockingIdx] = blockingType;
+                }
+                else if (alpha <= eps)
+                {
+                    // No progress made - numerical issue or degenerate problem
+                    break;
+                }
+            }
+
+            return x;
+        }
+
+        /// <summary>
+        /// Solves equality-constrained QP: min 0.5*x^T*H*x + c^T*x subject to A_eq*x = b_eq and active bound constraints
+        /// Returns (search_direction, lagrange_multipliers)
+        /// </summary>
+        private static (double[], double[]) SolveEqualityConstrainedQP(
+            double[,] H,
+            double[] c,
+            double[,] A_eq,
+            double[] b_eq,
+            int[] activeSet,
+            double[] lower,
+            double[] upper,
+            double[] x,
+            int n,
+            int m_eq,
+            double eps)
+        {
+            // Count free variables
+            var freeVars = new List<int>();
+            var activeVars = new List<int>();
+            for (int i = 0; i < n; i++)
+            {
+                if (activeSet[i] == 0)
+                    freeVars.Add(i);
+                else
+                    activeVars.Add(i);
+            }
+
+            int nFree = freeVars.Count;
+            int nActive = activeVars.Count;
+
+            if (nFree == 0)
+            {
+                // All variables fixed - compute Lagrange multipliers for active bounds
+
+                var grad = new double[n];
+                for (int i = 0; i < n; i++)
+                {
+                    grad[i] = c[i];
+                    for (int j = 0; j < n; j++)
+                    {
+                        grad[i] += H[i, j] * x[j];
+                    }
+                }
+
+                var pZero = new double[n];  // Zero direction
+                var lambdaActive = new double[n];
+
+                // Lagrange multiplier for active bound = gradient component
+                for (int i = 0; i < nActive; i++)
+                {
+                    int ii = activeVars[i];
+                    lambdaActive[ii] = grad[ii];
+                }
+
+                return (pZero, lambdaActive);
+            }
+
+            // Build reduced system for free variables only
+            // KKT system: [H_f   A_f^T] [p_f  ]   [-g_f]
+            //             [A_f   0    ] [lambda] = [r   ]
+            //
+            // where g_f = H_f*x_f + c_f (gradient w.r.t. free vars)
+            //       r = b_eq - A_eq*x (constraint residual)
+
+            int systemSize = nFree + m_eq;
+            var KKT = new double[systemSize, systemSize];
+            var rhs = new double[systemSize];
+
+            // Compute g_f = H*x + c (full gradient), then extract free part
+            var g = new double[n];
+            for (int i = 0; i < n; i++)
+            {
+                g[i] = c[i];
+                for (int j = 0; j < n; j++)
+                {
+                    g[i] += H[i, j] * x[j];
+                }
+            }
+
+            // Build H_f (free × free submatrix of H)
+            for (int i = 0; i < nFree; i++)
+            {
+                int ii = freeVars[i];
+                rhs[i] = -g[ii];  // -g_f
+
+                for (int j = 0; j < nFree; j++)
+                {
+                    int jj = freeVars[j];
+                    KKT[i, j] = H[ii, jj];
+                }
+            }
+
+            // Build A_f (m_eq × nFree submatrix of A_eq)
+            for (int i = 0; i < m_eq; i++)
+            {
+                // Compute constraint residual: r_i = b_eq[i] - A_eq[i,:]*x
+                double residual = b_eq[i];
+                for (int j = 0; j < n; j++)
+                {
+                    residual -= A_eq[i, j] * x[j];
+                }
+                rhs[nFree + i] = residual;
+
+                for (int j = 0; j < nFree; j++)
+                {
+                    int jj = freeVars[j];
+                    KKT[nFree + i, j] = A_eq[i, jj];  // A_f (lower-left block)
+                    KKT[j, nFree + i] = A_eq[i, jj];  // A_f^T (upper-right block)
+                }
+            }
+
+            // Solve KKT system
+            var solution = SolveLinearSystem(KKT, rhs, eps);
+            if (solution == null)
+            {
+                return (null, null);
+            }
+
+            // Extract search direction (free variables)
+            var p = new double[n];
+            for (int i = 0; i < nFree; i++)
+            {
+                p[freeVars[i]] = solution[i];
+            }
+
+            // Compute Lagrange multipliers for active bounds
+            // lambda_i = g_i - H_i,free * p_free for active variables
+            var lambda = new double[n];
+            for (int i = 0; i < nActive; i++)
+            {
+                int ii = activeVars[i];
+                lambda[ii] = g[ii];
+                for (int j = 0; j < nFree; j++)
+                {
+                    int jj = freeVars[j];
+                    lambda[ii] -= H[ii, jj] * p[jj];
+                }
+            }
+
+            return (p, lambda);
         }
 
         private static double EvaluateObjective(double[,] coefficients, int targetRow, int targetSign, double[] solution)
@@ -1513,7 +1833,6 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             bool minimizeThrust,
             double[] candidate)
         {
-            const double penaltyWeight = 1_000_000.0;
             double unintendedPenalty = 0;
 
             // Enforce constraints strictly (preemptive): any violation discards the candidate.
