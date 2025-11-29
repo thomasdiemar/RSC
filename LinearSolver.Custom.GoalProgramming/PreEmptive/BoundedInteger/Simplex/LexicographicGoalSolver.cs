@@ -125,7 +125,7 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                     coeffVector.Add(new KeyValuePair<string, Fraction>($"x{c}", ToFraction(coefficients[r, c])));
                 }
 
-                bool isSoft = double.IsNaN(constants[r]);
+                bool isSoft = Fraction.IsNaN(constants[r]);
                 var rhs = isSoft ? new Fraction(0) : ToFraction(constants[r]);
                 var sense = isSoft
                     ? GoalSense.Equal

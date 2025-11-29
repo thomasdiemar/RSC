@@ -110,9 +110,49 @@ namespace LinearSolver
 
         public static Fraction operator +(Fraction a, Fraction b)
 		{
-			decimal r1 = (decimal)a.num * b.den + (decimal)b.num * a.den;
-			decimal r2 = (decimal)a.den * b.den;
-			return new Fraction(r1, r2);
+			// Use a more careful approach to avoid overflow
+			// For a/b + c/d, we compute: (a*d + c*b) / (b*d)
+			// But we reduce denominators first using GCD to keep numbers smaller
+
+			try
+			{
+				decimal gcd = GCD(Math.Abs(a.den), Math.Abs(b.den));
+				decimal aScale = b.den / gcd;  // Scale factor for a's numerator
+				decimal bScale = a.den / gcd;  // Scale factor for b's numerator
+
+				decimal r1 = (decimal)a.num * aScale + (decimal)b.num * bScale;
+				decimal r2 = (decimal)a.den * aScale;  // = a.den * b.den / gcd
+
+				return new Fraction(r1, r2);
+			}
+			catch (OverflowException)
+			{
+				// If we still overflow, fall back to double arithmetic
+				double result = (double)a + (double)b;
+				// Find a reasonable fraction approximation
+				return ApproximateFromDouble(result);
+			}
+		}
+
+		private static Fraction ApproximateFromDouble(double value)
+		{
+			const int maxDenominator = 1000000;
+
+			if (double.IsNaN(value) || double.IsInfinity(value))
+				return NaN;
+
+			int sign = Math.Sign(value);
+			value = Math.Abs(value);
+
+			// Simple continued fraction approximation
+			int num = (int)Math.Round(value * maxDenominator);
+			int den = maxDenominator;
+
+			decimal gcd = GCD(Math.Abs(num), Math.Abs(den));
+			num = (int)(num / gcd);
+			den = (int)(den / gcd);
+
+			return new Fraction(sign * num, den);
 		}
 
 		public static Fraction operator +(Fraction a, int b)

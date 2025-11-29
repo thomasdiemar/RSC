@@ -1275,7 +1275,10 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
         private static Fraction ToFraction(double value)
         {
             const int scale = 1000000;
-            return new Fraction((int)Math.Round(value * scale), scale);
+            // Use decimal constructor to automatically reduce the fraction via GCD
+            decimal numerator = (decimal)Math.Round(value * scale);
+            decimal denominator = scale;
+            return new Fraction(numerator, denominator);
         }
 
         private sealed class GoalEvaluationResult
