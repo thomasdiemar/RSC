@@ -28,6 +28,17 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
         }
         public int MaxIterations { get; set; } = 1000;
 
+        /// <summary>
+        /// Solves a single priority level of the preemptive goal programming problem.
+        /// Collects locked constraints from lower priorities and optimizes current priority goals
+        /// while maintaining all previously achieved values.
+        /// </summary>
+        /// <param name="tableau">The goal programming tableau containing all goals and constraints</param>
+        /// <param name="priorityLevel">The priority level to solve (0 is highest priority)</param>
+        /// <returns>SimplexResult containing the solution status, objective value, and diagnostics</returns>
+        /// <exception cref="ArgumentNullException">Thrown when tableau is null</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when priorityLevel is negative</exception>
+        /// <exception cref="ArgumentException">Thrown when no goals exist for the specified priority</exception>
         public SimplexResult SolvePriority(PreEmptiveIntegerTableau tableau, int priorityLevel)
         {
             if (tableau == null)
@@ -74,7 +85,6 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                     double lockedValue = (double)goal.RightHandSide;
                     lockedConstraints.Add(r);
                     lockedValues.Add(lockedValue);
-                    Console.WriteLine($"[SolvePriority] Priority {priorityLevel} includes locked constraint from Priority {goal.Priority}: row {r} = {lockedValue}");
                 }
             }
 
@@ -91,12 +101,10 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 }
 
                 bool isSoft = goal.Tolerance >= Fraction.MaxValue - Fraction.Epsilon;
-                Console.WriteLine($"[SolvePriority] Row {r}: priority={goal.Priority}, tolerance={(double)goal.Tolerance:F0}, MaxValue={(double)Fraction.MaxValue:F0}, Epsilon={(double)Fraction.Epsilon:F12}, isSoft={isSoft}");
                 var rhs = (double)goal.RightHandSide;
 
                 if (isSoft)
                 {
-                    Console.WriteLine($"[SolvePriority] Adding row {r} to softRows");
                     softRows.Add(r);
                     continue;
                 }
@@ -150,9 +158,7 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
 
             // For priorities with only soft goals (no hard target), minimize unintended deviations
             bool shouldMinimizeSoft = (targetRow < 0 && softRows.Count > 0);
-            Console.WriteLine($"[SolvePriority] Calling SolveEnumerating: priority={priorityLevel}, constraintRows.Count={constraintRows.Count} (including {lockedConstraints.Count} locked), targetRow={targetRow}, shouldMinimizeSoft={shouldMinimizeSoft}");
             var feasible = SolveEnumerating(coefficients, constraintRows, constraintValues, targetRow, targetSign, allRightHandSides, allTolerances, softRows, minimizeThrust: shouldMinimizeSoft);
-            Console.WriteLine($"[SolvePriority] feasible solution: {(feasible == null ? "null" : string.Join(", ", feasible.Select((v, i) => $"x{i}={v:F3}")))}");
 
             if (feasible == null)
             {
@@ -459,6 +465,21 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             return SearchFeasible(coefficients, augmentedRows, augmentedValues, targetRow, targetSign, softRows, allRightHandSides, minimizeThrust, eps);
         }
 
+        /// <summary>
+        /// Searches for a feasible solution that satisfies all constraints and optimizes the objective.
+        /// Uses multiple strategies: binary search for bounded variables, equality system solving,
+        /// least squares, choose-and-fix enumeration, and active set QP for underdetermined systems.
+        /// </summary>
+        /// <param name="coefficients">Coefficient matrix (rows × columns)</param>
+        /// <param name="constraintRows">Indices of rows representing hard constraints (must be satisfied exactly)</param>
+        /// <param name="constraintValues">Target values for constraint rows</param>
+        /// <param name="targetRow">Row index of the objective to maximize/minimize (-1 if none)</param>
+        /// <param name="targetSign">Direction to optimize: +1 for maximize, -1 for minimize</param>
+        /// <param name="softRows">Indices of rows representing soft goals (minimize deviation)</param>
+        /// <param name="rightHandSides">Right-hand side values for all rows</param>
+        /// <param name="minimizeThrust">If true, minimize total thrust (sum of variables); if false, maximize objective</param>
+        /// <param name="eps">Numerical tolerance for comparisons</param>
+        /// <returns>Solution vector if found, null otherwise</returns>
         private static double[] SearchFeasible(
             double[,] coefficients,
             IList<int> constraintRows,
@@ -479,7 +500,6 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             double bestScore = double.NegativeInfinity;
             double[] best = null;
 
-            Console.WriteLine($"[SearchFeasible] cols={cols}, constraintCount={constraintCount}, targetRow={targetRow}, minimizeThrust={minimizeThrust}");
 
             if (cols <= 16)
             {
@@ -513,12 +533,10 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                     hasGoodObjective = Math.Abs(obj) > 1e-9;
                 }
 
-                Console.WriteLine($"[SearchFeasible] Binary search: best={(best == null ? "null" : string.Join(",", best.Select(v => $"{v:F2}")))} score={bestScore:F6}");
 
                 // When minimizing soft goals, don't return early - continue to try least squares for better solutions
                 if (best != null && bestScore > double.NegativeInfinity / 2 && hasGoodObjective && !minimizeThrust)
                 {
-                    Console.WriteLine($"[SearchFeasible] Returning early from binary search");
                     return best;
                 }
             }
@@ -529,7 +547,6 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 if (exact != null)
                 {
                     var exactScore = ScoreCandidate(coefficients, constraintRows, constraintValues, targetRow, targetSign, softSet, constraintSet, rows, minimizeThrust, exact);
-                    Console.WriteLine($"[SearchFeasible] SolveEqualitySystem: score={exactScore.Score:F6}");
                     if (exactScore.Score > bestScore + 1e-9)
                     {
                         bestScore = exactScore.Score;
@@ -541,7 +558,6 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 if (lsCandidate != null)
                 {
                     var score = ScoreCandidate(coefficients, constraintRows, constraintValues, targetRow, targetSign, softSet, constraintSet, rows, minimizeThrust, lsCandidate);
-                    Console.WriteLine($"[SearchFeasible] SolveLeastSquares: candidate={string.Join(",", lsCandidate.Select(v => $"{v:F2}"))} score={score.Score:F6}");
 
                     // Only update if better, unless we're in minimizeThrust mode and need any feasible solution
                     if (score.Score > bestScore + 1e-9 || (minimizeThrust && score.Score > double.NegativeInfinity))
@@ -552,7 +568,6 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
 
                     if (minimizeThrust && score.Score > double.NegativeInfinity)
                     {
-                        Console.WriteLine($"[SearchFeasible] Returning with LS solution");
                         return best;
                     }
                 }
@@ -585,10 +600,8 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 valueLookup[constraintRows[i]] = constraintValues[i];
             }
 
-            Console.WriteLine($"[SearchFeasible] Starting choose-and-fix enumeration: cols={cols}, constraintCount={constraintCount}, bestScore={bestScore:F6}");
             var variables = Enumerable.Range(0, cols).ToArray();
             var freeCombos = Choose(variables, constraintCount);
-            Console.WriteLine($"[SearchFeasible] freeCombos count: {freeCombos.Count()}");
 
             int comboIndex = 0;
             int nullSolutionCount = 0;
@@ -600,7 +613,6 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 var freeSet = new HashSet<int>(free);
                 var fixedVars = variables.Where(v => !freeSet.Contains(v)).ToArray();
                 int assignmentCount = 1 << fixedVars.Length;
-                if (comboIndex < 2) Console.WriteLine($"[SearchFeasible] Combo {comboIndex}: free={string.Join(",", free)}, fixedVars.Length={fixedVars.Length}, assignmentCount={assignmentCount}");
                 comboIndex++;
 
                 var freeList = free.ToArray();
@@ -670,20 +682,16 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
 
                     if (validSolutionCount <= 5)
                     {
-                        Console.WriteLine($"[SearchFeasible] Solution {validSolutionCount}: score={scoreResult.Score:F6}, thrust={candidate.Sum():F2}, bestScore={bestScore:F6}");
                     }
 
                     if (scoreResult.Score > bestScore + 1e-9)
                     {
-                        Console.WriteLine($"[SearchFeasible] New best! combo={comboIndex-1}, mask={mask}, score={scoreResult.Score:F6} (was {bestScore:F6}), thrust={candidate.Sum():F2}");
-                        Console.WriteLine($"[SearchFeasible] Solution: {string.Join(",", candidate.Select((v, i) => v > 1e-6 ? $"x{i}={v:F3}" : "").Where(s => s != ""))}");
                         bestScore = scoreResult.Score;
                         best = scoreResult.Solution;
                     }
                 }
             }
 
-            Console.WriteLine($"[SearchFeasible] Choose-and-fix summary: {validSolutionCount} valid, {nullSolutionCount} null, {outOfBoundsCount} out-of-bounds, total={validSolutionCount + nullSolutionCount + outOfBoundsCount}");
 
             // If we have an overdetermined system (more constraints than variables) and haven't found a good solution,
             // try to solve for the constraints and then maximize the objective
@@ -722,7 +730,6 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             // Need to maximize objective among infinitely many feasible solutions
             if (cols > constraintCount && targetRow >= 0 && (best == null || Math.Abs(currentObjective) < 1e-9))
             {
-                Console.WriteLine($"[SearchFeasible] Trying SolveUnderdeterminedSystem with targetRow={targetRow}");
                 var underdeterminedSolution = SolveUnderdeterminedSystem(
                     coefficients, constraintRows, constraintValues, targetRow, targetSign,
                     cols, constraintCount, eps);
@@ -730,7 +737,6 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 {
                     var score = ScoreCandidate(coefficients, constraintRows, constraintValues,
                         targetRow, targetSign, softSet, constraintSet, rows, minimizeThrust, underdeterminedSolution);
-                    Console.WriteLine($"[SearchFeasible] SolveUnderdeterminedSystem: score={score.Score:F6}");
                     if (score.Score > bestScore + 1e-9)
                     {
                         bestScore = score.Score;
@@ -743,7 +749,6 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             // Only call QP if choose-and-fix found a solution - QP may find better fractional solution
             if (cols > constraintCount && minimizeThrust && softSet.Count > 0 && best != null)
             {
-                Console.WriteLine($"[SearchFeasible] Trying active set QP solver to improve solution");
 
                 // Build soft goal matrix
                 var softRowsList = softRows.ToList();
@@ -807,7 +812,6 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                         x0[j] = Math.Min(0.5, avgContribution);  // Start at mid-range
                     }
 
-                    Console.WriteLine($"[SearchFeasible] QP: Using uniform initial guess with avg={avgContribution:F3}");
                 }
 
                 var qpSolution = SolveBoundedConstrainedLeastSquares(A_soft, A_eq, b_eq, lower, upper, x0, eps);
@@ -815,17 +819,14 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 {
                     var score = ScoreCandidate(coefficients, constraintRows, constraintValues,
                         targetRow, targetSign, softSet, constraintSet, rows, minimizeThrust, qpSolution);
-                    Console.WriteLine($"[SearchFeasible] Active set QP: score={score.Score:F6}, solution={string.Join(",", qpSolution.Select(v => v > 1e-6 ? $"{v:F3}" : "0"))}");
                     if (score.Score > bestScore + 1e-9)
                     {
-                        Console.WriteLine($"[SearchFeasible] QP solution is better! (was {bestScore:F6})");
                         bestScore = score.Score;
                         best = score.Solution;
                     }
                 }
             }
 
-            Console.WriteLine($"[SearchFeasible] Returning final: best={(best == null ? "null" : string.Join(",", best.Select(v => $"{v:F2}")))} score={bestScore:F6}");
             return best;
         }
 
@@ -1122,16 +1123,26 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
         }
 
         /// <summary>
-        /// Solves bounded constrained least squares: min ||A_soft * x||² subject to A_eq * x = b_eq, lower ≤ x ≤ upper
-        /// Uses active set method for quadratic programming with bounds.
+        /// Solves bounded constrained least squares problem using active set quadratic programming.
+        /// Problem formulation: minimize ||A_soft * x||² subject to A_eq * x = b_eq and lower ≤ x ≤ upper.
+        /// Iteratively identifies which bound constraints are active and solves KKT systems for free variables.
         /// </summary>
+        /// <param name="A_soft">Soft goal coefficient matrix (m_soft × n)</param>
+        /// <param name="A_eq">Equality constraint matrix (m_eq × n)</param>
+        /// <param name="b_eq">Equality constraint right-hand side vector (m_eq)</param>
+        /// <param name="lower">Lower bound vector for variables (n)</param>
+        /// <param name="upper">Upper bound vector for variables (n)</param>
+        /// <param name="x0">Initial solution guess (n)</param>
+        /// <param name="eps">Numerical tolerance for convergence checks</param>
+        /// <param name="maxIterations">Maximum number of active set iterations (default: 100)</param>
+        /// <returns>Optimal solution vector, or the best solution found if max iterations reached</returns>
         private static double[] SolveBoundedConstrainedLeastSquares(
-            double[,] A_soft,      // Soft goal matrix (m_soft × n)
-            double[,] A_eq,        // Equality constraint matrix (m_eq × n)
-            double[] b_eq,         // Equality constraint RHS (m_eq)
-            double[] lower,        // Lower bounds (n)
-            double[] upper,        // Upper bounds (n)
-            double[] x0,           // Initial feasible solution (n)
+            double[,] A_soft,
+            double[,] A_eq,
+            double[] b_eq,
+            double[] lower,
+            double[] upper,
+            double[] x0,
             double eps,
             int maxIterations = 100)
         {
@@ -1274,9 +1285,22 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
         }
 
         /// <summary>
-        /// Solves equality-constrained QP: min 0.5*x^T*H*x + c^T*x subject to A_eq*x = b_eq and active bound constraints
-        /// Returns (search_direction, lagrange_multipliers)
+        /// Solves equality-constrained quadratic programming subproblem for the active set method.
+        /// Problem: minimize 0.5*x^T*H*x + c^T*x subject to A_eq*x = b_eq and active bound constraints.
+        /// Builds and solves the KKT system for free variables, then computes Lagrange multipliers for active bounds.
         /// </summary>
+        /// <param name="H">Hessian matrix of the quadratic objective (n × n)</param>
+        /// <param name="c">Linear term coefficient vector (n)</param>
+        /// <param name="A_eq">Equality constraint matrix (m_eq × n)</param>
+        /// <param name="b_eq">Equality constraint right-hand side (m_eq)</param>
+        /// <param name="activeSet">Active set indicator: 0=free, 1=at lower bound, 2=at upper bound (n)</param>
+        /// <param name="lower">Lower bound vector (n)</param>
+        /// <param name="upper">Upper bound vector (n)</param>
+        /// <param name="x">Current solution point (n)</param>
+        /// <param name="n">Number of variables</param>
+        /// <param name="m_eq">Number of equality constraints</param>
+        /// <param name="eps">Numerical tolerance</param>
+        /// <returns>Tuple of (search direction vector, Lagrange multipliers for active bounds), or (null, null) if KKT system fails</returns>
         private static (double[], double[]) SolveEqualityConstrainedQP(
             double[,] H,
             double[] c,
@@ -1809,6 +1833,14 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             }
         }
 
+        /// <summary>
+        /// Evaluates a single row of the coefficient matrix with the given solution vector.
+        /// Computes the dot product: result = sum(coefficients[row, j] * values[j]) for all j.
+        /// </summary>
+        /// <param name="coefficients">Coefficient matrix</param>
+        /// <param name="row">Row index to evaluate</param>
+        /// <param name="values">Solution vector</param>
+        /// <returns>Dot product of the row and solution vector</returns>
         private static double EvaluateRow(double[,] coefficients, int row, double[] values)
         {
             double total = 0;
@@ -1821,6 +1853,21 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             return total;
         }
 
+        /// <summary>
+        /// Evaluates and scores a candidate solution based on constraint satisfaction, objective value, and soft goal violations.
+        /// Returns negative infinity if any hard constraint is violated (preemptive approach).
+        /// </summary>
+        /// <param name="coefficients">Coefficient matrix (rows × columns)</param>
+        /// <param name="constraintRows">Indices of hard constraint rows</param>
+        /// <param name="constraintValues">Required values for hard constraints</param>
+        /// <param name="targetRow">Row index of objective to optimize (-1 if none)</param>
+        /// <param name="targetSign">Direction: +1 for maximize, -1 for minimize</param>
+        /// <param name="softSet">Set of soft goal row indices (deviations are penalized but allowed)</param>
+        /// <param name="constraintSet">Set of all constraint row indices</param>
+        /// <param name="totalRows">Total number of rows in coefficient matrix</param>
+        /// <param name="minimizeThrust">If true, minimize sum of variables (total thrust); if false, maximize objective</param>
+        /// <param name="candidate">Solution vector to evaluate</param>
+        /// <returns>Tuple of (score, solution). Score is negative infinity if infeasible, otherwise based on objective and penalties</returns>
         private static (double Score, double[] Solution) ScoreCandidate(
             double[,] coefficients,
             IList<int> constraintRows,

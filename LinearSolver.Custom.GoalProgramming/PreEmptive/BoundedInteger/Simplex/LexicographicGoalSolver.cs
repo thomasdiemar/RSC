@@ -136,8 +136,11 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                             : GoalSense.Equal;
                 var tolerance = isSoft ? Fraction.MaxValue : new Fraction(0);
 
-                goals.Add(new GoalDefinition($"g{r}", sense, priority: 0, coefficientVector: coeffVector, rightHandSide: rhs, tolerance: tolerance));
-                states.Add(new TableauRowState($"g{r}", priority: 0, value: rhs, bound: new SolverBound(Fraction.MinValue, Fraction.MaxValue)));
+                // Preemptive approach: commanded goals (non-soft) have priority 0, soft goals have priority 1
+                int priority = isSoft ? 1 : 0;
+
+                goals.Add(new GoalDefinition($"g{r}", sense, priority: priority, coefficientVector: coeffVector, rightHandSide: rhs, tolerance: tolerance));
+                states.Add(new TableauRowState($"g{r}", priority: priority, value: rhs, bound: new SolverBound(Fraction.MinValue, Fraction.MaxValue)));
             }
 
             var tableau = new PreEmptiveIntegerTableau(variables, goals, states);
@@ -182,6 +185,11 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             var priorities = GetPriorities(workingTableau);
             var stageResults = new List<SimplexResult>();
             var stageObjectives = new Dictionary<int, Fraction>();
+
+            for (int i = 0; i < workingTableau.RowGoals.Count; i++)
+            {
+                var goal = workingTableau.RowGoals[i];
+            }
 
             foreach (var priority in priorities)
             {
