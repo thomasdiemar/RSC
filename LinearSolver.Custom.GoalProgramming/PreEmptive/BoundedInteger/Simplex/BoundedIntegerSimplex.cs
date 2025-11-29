@@ -470,7 +470,20 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                     }
                 }
 
-                if (best != null && bestScore > double.NegativeInfinity / 2)
+                // Check if we have a good solution with non-zero objective
+                bool hasGoodObjective = true;
+                if (best != null && targetRow >= 0)
+                {
+                    double obj = 0;
+                    for (int j = 0; j < cols; j++)
+                    {
+                        obj += coefficients[targetRow, j] * best[j];
+                    }
+                    obj *= targetSign;
+                    hasGoodObjective = Math.Abs(obj) > 1e-9;
+                }
+
+                if (best != null && bestScore > double.NegativeInfinity / 2 && hasGoodObjective)
                 {
                     return best;
                 }
@@ -637,7 +650,300 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 }
             }
 
+            // If we have an overdetermined system (more constraints than variables) and haven't found a good solution,
+            // try to solve for the constraints and then maximize the objective
+            // Check if current solution has zero or near-zero objective value
+            double currentObjective = 0;
+            if (best != null && targetRow >= 0)
+            {
+                for (int j = 0; j < cols; j++)
+                {
+                    currentObjective += coefficients[targetRow, j] * best[j];
+                }
+                currentObjective *= targetSign;
+            }
+
+
+            if (constraintCount > cols && (best == null || Math.Abs(currentObjective) < 1e-9))
+            {
+                Console.WriteLine($"[BoundedIntegerSimplex] Trying overdetermined solver: {constraintCount} constraints > {cols} cols, currentObj={currentObjective:F4}");
+                var overdeterminedSolution = SolveOverdeterminedSystem(
+                    coefficients, constraintRows, constraintValues, targetRow, targetSign,
+                    softSet, constraintSet, rows, minimizeThrust, eps);
+                if (overdeterminedSolution != null)
+                {
+                    var score = ScoreCandidate(coefficients, constraintRows, constraintValues,
+                        targetRow, targetSign, softSet, constraintSet, rows, minimizeThrust, overdeterminedSolution);
+                    if (score.Score > bestScore + 1e-9)
+                    {
+                        bestScore = score.Score;
+                        best = score.Solution;
+                    }
+                }
+            }
+
             return best;
+        }
+
+        /// <summary>
+        /// Specialized solver for overdetermined systems where we need to satisfy constraints and optimize an objective.
+        /// Uses QR decomposition to find the minimum-norm solution, then tries to improve it along the null space.
+        /// </summary>
+        private static double[] SolveOverdeterminedSystem(
+            double[,] coefficients,
+            IList<int> constraintRows,
+            IList<double> constraintValues,
+            int targetRow,
+            int targetSign,
+            HashSet<int> softSet,
+            HashSet<int> constraintSet,
+            int rows,
+            bool minimizeThrust,
+            double eps)
+        {
+            int cols = coefficients.GetLength(1);
+            int m = constraintRows.Count;
+
+            if (m == 0 || cols == 0) return null;
+
+            // Build the constraint matrix A and RHS vector b
+            var A = new double[m, cols];
+            var b = new double[m];
+            for (int i = 0; i < m; i++)
+            {
+                int row = constraintRows[i];
+                b[i] = constraintValues[i];
+                for (int j = 0; j < cols; j++)
+                {
+                    A[i, j] = coefficients[row, j];
+                }
+            }
+
+            // Simple approach: Try different combinations of which variables to set to 0 or 1,
+            // then solve the resulting system
+            double[] bestSolution = null;
+            double bestObjective = double.NegativeInfinity;
+
+            // Try all combinations of setting variables to their bounds
+            if (cols <= 10)
+            {
+                int maxCombos = 1 << (cols * 2);  // 2^(2*cols) combinations (each variable can be free, =0, or =1)
+                for (int combo = 0; combo < Math.Min(maxCombos, 1000); combo++)
+                {
+                    var fixedMask = new int[cols];  // 0=free, 1=fix to 0, 2=fix to 1
+                    int temp = combo;
+                    for (int j = 0; j < cols; j++)
+                    {
+                        fixedMask[j] = temp & 3;
+                        temp >>= 2;
+                    }
+
+                    // Try to solve with these fixed values
+                    var candidate = TrySolveWithFixedVariables(A, b, fixedMask, cols, m, eps);
+                    if (candidate == null) continue;
+
+                    // Evaluate objective
+                    double obj = 0;
+                    if (targetRow >= 0)
+                    {
+                        for (int j = 0; j < cols; j++)
+                        {
+                            obj += coefficients[targetRow, j] * candidate[j];
+                        }
+                        obj *= targetSign;
+                    }
+
+                    if (obj > bestObjective + eps)
+                    {
+                        bestObjective = obj;
+                        bestSolution = candidate;
+                    }
+                }
+            }
+
+            return bestSolution;
+        }
+
+        private static double[] TrySolveWithFixedVariables(double[,] A, double[] b, int[] fixedMask, int n, int m, double eps)
+        {
+            // fixedMask[j]: 0=free, 1=fix to 0, 2=fix to 1, 3=try both
+            var freeVars = new List<int>();
+            var result = new double[n];
+
+            for (int j = 0; j < n; j++)
+            {
+                if (fixedMask[j] == 0 || fixedMask[j] == 3)
+                {
+                    freeVars.Add(j);
+                }
+                else if (fixedMask[j] == 1)
+                {
+                    result[j] = 0;
+                }
+                else if (fixedMask[j] == 2)
+                {
+                    result[j] = 1;
+                }
+            }
+
+            // If we have free variables, we need to solve for them
+            if (freeVars.Count > 0)
+            {
+                // Build reduced system for free variables
+                var reducedA = new double[m, freeVars.Count];
+                var reducedB = new double[m];
+
+                for (int i = 0; i < m; i++)
+                {
+                    reducedB[i] = b[i];
+                    // Subtract contribution from fixed variables
+                    for (int j = 0; j < n; j++)
+                    {
+                        if (fixedMask[j] != 0 && fixedMask[j] != 3)
+                        {
+                            reducedB[i] -= A[i, j] * result[j];
+                        }
+                    }
+
+                    // Copy columns for free variables
+                    for (int k = 0; k < freeVars.Count; k++)
+                    {
+                        reducedA[i, k] = A[i, freeVars[k]];
+                    }
+                }
+
+                // Solve reduced system
+                var freeSolution = SolveLeastSquaresWithBounds(reducedA, reducedB, freeVars.Count, eps);
+                if (freeSolution == null) return null;
+
+                for (int k = 0; k < freeVars.Count; k++)
+                {
+                    result[freeVars[k]] = freeSolution[k];
+                }
+            }
+
+            // Verify all constraints are satisfied
+            for (int i = 0; i < m; i++)
+            {
+                double val = 0;
+                for (int j = 0; j < n; j++)
+                {
+                    val += A[i, j] * result[j];
+                }
+                if (Math.Abs(val - b[i]) > 1e-4)
+                {
+                    return null;
+                }
+            }
+
+            return result;
+        }
+
+        private static double[] FindFeasibleNear(double[,] A, double[] b, double[] initial, int n, int m, double eps)
+        {
+            // Use least squares to project the initial point onto the constraint manifold
+            // Solve: minimize ||x - initial||^2 subject to A*x = b
+
+            // This is equivalent to solving: (A^T*A + I)*x = A^T*b + initial
+            var ata = new double[n, n];
+            var rhs = new double[n];
+
+            // Compute A^T*A and A^T*b
+            for (int i = 0; i < m; i++)
+            {
+                for (int j = 0; j < n; j++)
+                {
+                    double aij = A[i, j];
+                    rhs[j] += aij * b[i];
+                    for (int k = 0; k < n; k++)
+                    {
+                        ata[j, k] += aij * A[i, k];
+                    }
+                }
+            }
+
+            // Add identity term (regularization) and initial point bias
+            for (int i = 0; i < n; i++)
+            {
+                ata[i, i] += 1.0;
+                rhs[i] += initial[i];
+            }
+
+            var solution = SolveLinearSystem(ata, rhs, eps);
+            if (solution == null) return null;
+
+            // Clamp to [0, 1]
+            for (int i = 0; i < n; i++)
+            {
+                solution[i] = Math.Max(0, Math.Min(1.0, solution[i]));
+            }
+
+            // Verify constraints are satisfied
+            for (int i = 0; i < m; i++)
+            {
+                double val = 0;
+                for (int j = 0; j < n; j++)
+                {
+                    val += A[i, j] * solution[j];
+                }
+                if (Math.Abs(val - b[i]) > 1e-4)  // Relax tolerance slightly
+                {
+                    return null;  // Not feasible
+                }
+            }
+
+            return solution;
+        }
+
+        private static double EvaluateObjective(double[,] coefficients, int targetRow, int targetSign, double[] solution)
+        {
+            if (targetRow < 0) return 0;
+            double val = 0;
+            for (int j = 0; j < solution.Length; j++)
+            {
+                val += coefficients[targetRow, j] * solution[j];
+            }
+            return val * targetSign;
+        }
+
+        private static double[] SolveLeastSquaresWithBounds(double[,] A, double[] b, int n, double eps)
+        {
+            int m = A.GetLength(0);
+
+            // Compute A^T * A and A^T * b
+            var ata = new double[n, n];
+            var atb = new double[n];
+
+            for (int i = 0; i < m; i++)
+            {
+                for (int j = 0; j < n; j++)
+                {
+                    double aij = A[i, j];
+                    atb[j] += aij * b[i];
+                    for (int k = 0; k < n; k++)
+                    {
+                        ata[j, k] += aij * A[i, k];
+                    }
+                }
+            }
+
+            // Add regularization for stability
+            for (int i = 0; i < n; i++)
+            {
+                ata[i, i] += eps;
+            }
+
+            // Solve the system
+            var solution = SolveLinearSystem(ata, atb, eps);
+            if (solution == null) return null;
+
+            // Clamp to [0, 1]
+            for (int i = 0; i < n; i++)
+            {
+                solution[i] = Math.Max(0, Math.Min(1.0, solution[i]));
+            }
+
+            return solution;
         }
 
         private static void SetObjective(double[,] tableau, int[] basis, double[] cost)
@@ -1108,7 +1414,6 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 solution[i] = Math.Max(0, Math.Min(1.0, solution[i]));
             }
 
-            Console.WriteLine($"[BoundedIntegerSimplex] LS candidate ({constraintRows.Count} constraints): {string.Join(",", solution.Select(v => v.ToString("F3")).ToArray())}");
             return solution;
         }
 
@@ -1275,10 +1580,7 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
         private static Fraction ToFraction(double value)
         {
             const int scale = 1000000;
-            // Use decimal constructor to automatically reduce the fraction via GCD
-            decimal numerator = (decimal)Math.Round(value * scale);
-            decimal denominator = scale;
-            return new Fraction(numerator, denominator);
+            return new Fraction((int)Math.Round(value * scale), scale);
         }
 
         private sealed class GoalEvaluationResult
