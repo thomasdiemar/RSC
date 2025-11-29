@@ -98,7 +98,6 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
 
             if (targetRows.Count == 0 && constraintRows.Count == 0)
             {
-                Console.WriteLine($"[BoundedIntegerSimplex] No target rows for priority {priorityLevel}; returning current solution.");
                 diagnostics.SetFinalStates(tableau.ColumnHeaders);
                 return new SimplexResult(SimplexStatus.Optimal, objectiveValue, diagnostics, tableau.ColumnHeaders.Select(v => v.Clone()).ToList());
             }
@@ -495,11 +494,10 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 if (exact != null)
                 {
                     var exactScore = ScoreCandidate(coefficients, constraintRows, constraintValues, targetRow, targetSign, softSet, constraintSet, rows, minimizeThrust, exact);
-                    bestScore = exactScore.Score;
-                    best = exactScore.Solution;
-                    if (exactScore.Score > double.NegativeInfinity && exactScore.Score >= 0 && exactScore.Score < double.PositiveInfinity)
+                    if (exactScore.Score > bestScore + 1e-9)
                     {
-                        // Exact feasibility is preferred; still allow refinement below.
+                        bestScore = exactScore.Score;
+                        best = exactScore.Solution;
                     }
                 }
 
@@ -507,9 +505,15 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 if (lsCandidate != null)
                 {
                     var score = ScoreCandidate(coefficients, constraintRows, constraintValues, targetRow, targetSign, softSet, constraintSet, rows, minimizeThrust, lsCandidate);
-                    bestScore = score.Score;
-                    best = score.Solution;
-                    if (minimizeThrust)
+
+                    // Only update if better, unless we're in minimizeThrust mode and need any feasible solution
+                    if (score.Score > bestScore + 1e-9 || (minimizeThrust && score.Score > double.NegativeInfinity))
+                    {
+                        bestScore = score.Score;
+                        best = score.Solution;
+                    }
+
+                    if (minimizeThrust && score.Score > double.NegativeInfinity)
                     {
                         return best;
                     }
@@ -664,9 +668,10 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             }
 
 
+
+            // Handle overdetermined systems (more constraints than variables)
             if (constraintCount > cols && (best == null || Math.Abs(currentObjective) < 1e-9))
             {
-                Console.WriteLine($"[BoundedIntegerSimplex] Trying overdetermined solver: {constraintCount} constraints > {cols} cols, currentObj={currentObjective:F4}");
                 var overdeterminedSolution = SolveOverdeterminedSystem(
                     coefficients, constraintRows, constraintValues, targetRow, targetSign,
                     softSet, constraintSet, rows, minimizeThrust, eps);
@@ -674,6 +679,25 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
                 {
                     var score = ScoreCandidate(coefficients, constraintRows, constraintValues,
                         targetRow, targetSign, softSet, constraintSet, rows, minimizeThrust, overdeterminedSolution);
+                    if (score.Score > bestScore + 1e-9)
+                    {
+                        bestScore = score.Score;
+                        best = score.Solution;
+                    }
+                }
+            }
+
+            // Handle underdetermined systems (more variables than constraints)
+            // Need to maximize objective among infinitely many feasible solutions
+            if (cols > constraintCount && targetRow >= 0 && (best == null || Math.Abs(currentObjective) < 1e-9))
+            {
+                var underdeterminedSolution = SolveUnderdeterminedSystem(
+                    coefficients, constraintRows, constraintValues, targetRow, targetSign,
+                    cols, constraintCount, eps);
+                if (underdeterminedSolution != null)
+                {
+                    var score = ScoreCandidate(coefficients, constraintRows, constraintValues,
+                        targetRow, targetSign, softSet, constraintSet, rows, minimizeThrust, underdeterminedSolution);
                     if (score.Score > bestScore + 1e-9)
                     {
                         bestScore = score.Score;
@@ -728,7 +752,7 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             if (cols <= 10)
             {
                 int maxCombos = 1 << (cols * 2);  // 2^(2*cols) combinations (each variable can be free, =0, or =1)
-                for (int combo = 0; combo < Math.Min(maxCombos, 1000); combo++)
+                for (int combo = 0; combo < Math.Min(maxCombos, 10000); combo++)
                 {
                     var fixedMask = new int[cols];  // 0=free, 1=fix to 0, 2=fix to 1
                     int temp = combo;
@@ -762,6 +786,183 @@ namespace LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex
             }
 
             return bestSolution;
+        }
+
+        /// <summary>
+        /// Solve an underdetermined system (more variables than constraints) by maximizing the objective.
+        /// Strategy: Fix some variables at their bounds and solve for the rest.
+        /// </summary>
+        private static double[] SolveUnderdeterminedSystem(
+            double[,] coefficients,
+            IList<int> constraintRows,
+            IList<double> constraintValues,
+            int targetRow,
+            int targetSign,
+            int cols,
+            int m,
+            double eps)
+        {
+
+            // Build constraint matrix A and RHS vector b
+            var A = new double[m, cols];
+            var b = new double[m];
+            for (int i = 0; i < m; i++)
+            {
+                int row = constraintRows[i];
+                b[i] = constraintValues[i];
+                for (int j = 0; j < cols; j++)
+                {
+                    A[i, j] = coefficients[row, j];
+                }
+            }
+
+            double[] bestSolution = null;
+            double bestObjective = double.NegativeInfinity;
+
+            // Get objective coefficients
+            var objCoeffs = new double[cols];
+            for (int j = 0; j < cols; j++)
+            {
+                objCoeffs[j] = coefficients[targetRow, j] * targetSign;
+            }
+
+            // Strategy: Try fixing different subsets of variables to maximize the objective
+            // Since we have more degrees of freedom, prioritize variables with positive objective coefficients
+
+            // First, try a greedy approach: set variables with positive objective coefficients to 1
+            var greedy = new double[cols];
+            for (int j = 0; j < cols; j++)
+            {
+                greedy[j] = objCoeffs[j] > 0 ? 1.0 : 0.0;
+            }
+
+            // Project onto constraint manifold
+            double bestThrust = double.PositiveInfinity;
+            var greedySolution = ProjectOntoConstraints(A, b, greedy, cols, m, eps);
+            if (greedySolution != null)
+            {
+                double obj = 0;
+                for (int j = 0; j < cols; j++)
+                {
+                    obj += objCoeffs[j] * greedySolution[j];
+                }
+                double thrust = greedySolution.Sum();
+                if (obj > bestObjective)
+                {
+                    bestObjective = obj;
+                    bestThrust = thrust;
+                    bestSolution = greedySolution;
+                }
+            }
+
+            // Try different combinations of fixed variables (limit search to avoid explosion)
+            // For 6 variables, 4^6 = 4096 combinations
+            int maxCombos = Math.Min(1 << (cols * 2), 10000);
+            for (int combo = 0; combo < maxCombos; combo++)
+            {
+                var fixedMask = new int[cols];
+                int temp = combo;
+                for (int j = 0; j < cols; j++)
+                {
+                    fixedMask[j] = temp & 3;  // 0=free, 1=fix to 0, 2=fix to 1
+                    temp >>= 2;
+                }
+
+                var candidate = TrySolveWithFixedVariables(A, b, fixedMask, cols, m, eps);
+                if (candidate == null) continue;
+
+                double obj = 0;
+                for (int j = 0; j < cols; j++)
+                {
+                    obj += objCoeffs[j] * candidate[j];
+                }
+
+                double thrust = candidate.Sum();
+
+                // Use objective as primary, thrust as tie-breaker
+                bool isBetter = obj > bestObjective + eps ||
+                                (Math.Abs(obj - bestObjective) <= eps && thrust < bestThrust - eps);
+
+                if (isBetter)
+                {
+                    bestObjective = obj;
+                    bestThrust = thrust;
+                    bestSolution = candidate;
+                }
+            }
+
+            return bestSolution;
+        }
+
+        /// <summary>
+        /// Project a point onto the constraint manifold A*x = b.
+        /// </summary>
+        private static double[] ProjectOntoConstraints(double[,] A, double[] b, double[] initial, int n, int m, double eps)
+        {
+            // Use least squares: minimize ||x - initial||^2 subject to A*x = b
+            // Lagrangian: L = ||x - initial||^2 + lambda^T (A*x - b)
+            // Optimality: 2(x - initial) + A^T*lambda = 0, A*x = b
+            // => x = initial - 0.5*A^T*lambda, A*x = b
+            // => A*initial - 0.5*A*A^T*lambda = b
+            // => lambda = 2*(A*A^T)^{-1}*(A*initial - b)
+
+            var aat = new double[m, m];
+            var rhs = new double[m];
+
+            // Compute A*A^T and A*initial - b
+            for (int i = 0; i < m; i++)
+            {
+                rhs[i] = -b[i];
+                for (int j = 0; j < n; j++)
+                {
+                    rhs[i] += A[i, j] * initial[j];
+                }
+
+                for (int k = 0; k < m; k++)
+                {
+                    for (int j = 0; j < n; j++)
+                    {
+                        aat[i, k] += A[i, j] * A[k, j];
+                    }
+                }
+            }
+
+            // Add regularization
+            for (int i = 0; i < m; i++)
+            {
+                aat[i, i] += eps;
+            }
+
+            var lambda = SolveLinearSystem(aat, rhs, eps);
+            if (lambda == null) return null;
+
+            // Compute x = initial - 0.5*A^T*lambda
+            var result = new double[n];
+            for (int j = 0; j < n; j++)
+            {
+                result[j] = initial[j];
+                for (int i = 0; i < m; i++)
+                {
+                    result[j] -= 0.5 * A[i, j] * lambda[i];
+                }
+                result[j] = Math.Max(0, Math.Min(1.0, result[j]));
+            }
+
+            // Verify constraints
+            for (int i = 0; i < m; i++)
+            {
+                double val = 0;
+                for (int j = 0; j < n; j++)
+                {
+                    val += A[i, j] * result[j];
+                }
+                if (Math.Abs(val - b[i]) > 1e-4)
+                {
+                    return null;
+                }
+            }
+
+            return result;
         }
 
         private static double[] TrySolveWithFixedVariables(double[,] A, double[] b, int[] fixedMask, int n, int m, double eps)

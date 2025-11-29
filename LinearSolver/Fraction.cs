@@ -35,16 +35,23 @@ namespace LinearSolver
 
 		public Fraction(int n, int d)
 		{
-			num = n;
 			den = d == 0 && n == 0 ? 1 : d;
 
 			CheckDenominatorZero(den);
+			CheckMinValue(n);
+			CheckMinValue(d);
 
-			CheckMinValue(num);
-			CheckMinValue(den);
+			// Reduce the fraction using GCD
+			decimal gcd = GCD(Math.Abs((decimal)n), Math.Abs((decimal)d));
+			num = (long)(n / gcd);
+			den = (long)(d / gcd);
 
-			//Fraction f = new Fraction( (decimal)num, (decimal)den );
-			//Initialize( );
+			// Ensure denominator is positive
+			if (den < 0)
+			{
+				num = -num;
+				den = -den;
+			}
 		}
 
 		private static void CheckMinValue(long n)
@@ -110,9 +117,40 @@ namespace LinearSolver
 
         public static Fraction operator +(Fraction a, Fraction b)
 		{
-			decimal r1 = (decimal)a.num * b.den + (decimal)b.num * a.den;
-			decimal r2 = (decimal)a.den * b.den;
-			return new Fraction(r1, r2);
+			try
+			{
+				decimal r1 = (decimal)a.num * b.den + (decimal)b.num * a.den;
+				decimal r2 = (decimal)a.den * b.den;
+				return new Fraction(r1, r2);
+			}
+			catch (OverflowException)
+			{
+				// Fall back to double precision if decimal overflows
+				double aVal = (double)a.num / (double)a.den;
+				double bVal = (double)b.num / (double)b.den;
+				double result = aVal + bVal;
+
+				// Convert back to fraction with reasonable precision
+				const int maxDenom = 1000000;
+				int bestNum = 0;
+				int bestDenom = 1;
+				double bestError = Math.Abs(result);
+
+				for (int d = 1; d <= maxDenom; d++)
+				{
+					int n = (int)Math.Round(result * d);
+					double error = Math.Abs(result - (double)n / d);
+					if (error < bestError)
+					{
+						bestNum = n;
+						bestDenom = d;
+						bestError = error;
+						if (error < 1e-10) break;
+					}
+				}
+
+				return new Fraction(bestNum, bestDenom);
+			}
 		}
 
 		public static Fraction operator +(Fraction a, int b)
