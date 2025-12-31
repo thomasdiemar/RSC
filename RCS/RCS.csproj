@@ -12,6 +12,16 @@
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageId>PVS.RCS</PackageId>
+    <Title>RCS Thruster Optimization</Title>
+    <Version>1.0.0</Version>
+    <Authors>PVS</Authors>
+    <Description>Reaction Control System (RCS) thruster optimization library for attitude and translation control with multiple solver implementations.</Description>
+    <PackageTags>rcs;thruster;optimization;attitude-control</PackageTags>
+    <RepositoryUrl>https://github.com/thomasdiemar/RSC</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
