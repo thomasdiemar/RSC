@@ -9,6 +9,11 @@ TestResults/
 *.suo
 *.cache
 
+# Environment variables
+.env
+.env.local
+.env.*.local
+
 # Packages restored by NuGet
 packages/
 
