@@ -7,9 +7,46 @@
 - RCS.Test/ – MSTest suite covering multiple thruster layouts.
 
 ## Build, Test, and Development Commands
-- dotnet build RCS.slnx – build all projects.
-- dotnet test RCS.Test/RCS.Test.csproj – run the full MSTest suite.
-- Typical loop: edit → dotnet test → review TestContext output for diagnostics.
+
+### Quick Start
+The repository includes PowerShell scripts that automatically load environment variables from `.env`:
+
+**Build and Test (Release mode):**
+```powershell
+.\build.ps1
+```
+
+**Run Tests Only (Debug mode):**
+```powershell
+.\test.ps1
+```
+
+### Script Usage Details
+
+**build.ps1** – Full build workflow
+- Loads `.env` file automatically
+- Restores dependencies
+- Builds solution in Release configuration
+- Runs full test suite
+- Usage: `.\build.ps1` or `.\build.ps1 -Configuration Debug`
+
+**test.ps1** – Test-focused workflow  
+- Loads `.env` file automatically
+- Restores dependencies
+- Builds solution in Debug configuration
+- Runs test suite with detailed output
+- Usage: `.\test.ps1` or `.\test.ps1 -Configuration Release -Verbose`
+
+### Manual Commands (if needed)
+- `dotnet build RCS.slnx` – build all projects
+- `dotnet test RCS.Test/RCS.Test.csproj` – run the full MSTest suite (84 tests)
+- Typical loop: edit → `.\test.ps1` → review TestContext output for diagnostics
+
+### Environment Setup
+The scripts automatically load environment variables from `.env` file:
+- Create/update `.env` with `AZURE_DEVOPS_NUGET_TOKEN=YOUR_PAT`
+- Scripts handle .env parsing, quoting, and environment variable setup
+- See nuget.config for authentication details
 
 ## Coding Style & Naming Conventions
 - C# with 4-space indentation; keep files ASCII.
