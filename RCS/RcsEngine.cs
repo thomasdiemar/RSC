@@ -6,7 +6,7 @@ namespace RCS
     {
         public Dictionary<string, RcsThruster> Thrusters { get; }
 
-        public RcsVector CenterOfMass { get; set; } = new RcsVector(0, 0, 0);
+        public RcsVector<int> CenterOfMass { get; set; } = new RcsVector<int>(0, 0, 0);
 
         public RcsEngine(Dictionary<string, RcsThruster> thrusters)
         {

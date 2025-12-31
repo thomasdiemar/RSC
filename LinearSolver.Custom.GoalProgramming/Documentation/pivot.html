@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Simplex Pivot — Step-by-Step (HTML)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root{
+    --ink:#1f2328; --muted:#586069; --bg:#f7f9fb; --line:#dce1e7;
+    --enter:#e6f0ff; --enter-b:#7aa2ff;          /* entering */
+    --leave:#ffe6ea; --leave-b:#ff9db0;          /* leaving */
+    --pivot:#fff3b0; --pivot-b:#e0cc7a;          /* pivot element */
+    --obj:#e8f7e8; --obj-b:#9ad89a;              /* objective row */
+    --note:#eef2ff; --note-b:#c7d2fe;
+  }
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+            font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  main{max-width:1100px;margin:28px auto;padding:0 18px}
+  h1{font-size:1.9rem;margin:.2rem 0 1rem}
+  h2{margin:1.2rem 0 .6rem}
+  h3{margin:1rem 0 .5rem}
+  p.lead{color:var(--muted)}
+  .card{background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 1px 0 rgba(0,0,0,.03);margin:.7rem 0}
+  .hd{padding:10px 12px;border-bottom:1px solid var(--line);font-weight:600}
+  .bd{padding:12px}
+  .note{background:var(--note);border:1px solid var(--note-b);border-radius:8px;padding:10px 12px}
+  table{width:100%;border-collapse:collapse;margin:.6rem 0}
+  th,td{border:1px solid var(--line);padding:6px 8px;text-align:right}
+  th:first-child,td:first-child{text-align:left}
+  .status{text-align:center;white-space:nowrap}
+  .zrow td,.zrow th{background:var(--obj);font-weight:700;border-color:var(--obj-b)}
+  .enter{background:var(--enter);border:1px solid var(--enter-b)}
+  .leave{background:var(--leave);border:1px solid var(--leave-b)}
+  .pivotcell{background:var(--pivot);border:2px solid var(--pivot-b);font-weight:700}
+  code{background:#f6f8fa;border:1px solid var(--line);padding:0 .25rem;border-radius:4px}
+  .flex{display:flex;gap:10px;flex-wrap:wrap}
+  .pill{display:inline-block;padding:.12rem .5rem;border-radius:999px;border:1px solid var(--line);background:#fff}
+  .math{font-family:ui-monospace,Consolas,Menlo,monospace}
+  .step{padding:8px 10px;border-left:4px solid #cbd5e1;background:#fff;border:1px solid var(--line);border-radius:8px;margin:.4rem 0}
+</style>
+</head>
+<body>
+<main>
+
+<h1>Simplex Pivot — Step-by-Step</h1>
+<p class="lead">
+A <b>pivot</b> swaps one nonbasic variable into the basis and one basic variable out, by turning the entering column into a unit vector (1 in the pivot row, 0 elsewhere) via Gauss–Jordan row operations. Below are two worked HTML table demos:
+(1) a <b>degenerate pivot</b> (θ=0) and (2) a <b>non-degenerate pivot</b> (θ&gt;0).
+</p>
+
+<!-- ================================================================== -->
+<!-- 1) DEGENERATE PIVOT (theta = 0)                                    -->
+<!-- ================================================================== -->
+<div class="card">
+  <div class="hd">Example A — Degenerate Row Pivot (θ = 0)</div>
+  <div class="bd">
+    <div class="note">
+      <div><b>Problem (minimization):</b> <span class="math">min z = −(x₁ + x₂)</span></div>
+      <div><b>Equality row (in basis):</b> <span class="math">x₁ − x₂ = 0</span></div>
+      <div><b>Bounds:</b> <span class="math">0 ≤ x₁ ≤ 0</span> (fixed at 0), <span class="math">0 ≤ x₂ ≤ 1</span></div>
+      <div><b>Start:</b> <span class="math">(x₁,x₂)=(0,0)</span></div>
+    </div>
+
+    <h3>Initial tableau</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Basic</th><th>RHS</th><th>x₁</th><th>x₂</th><th class="status">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="leave">
+          <td><b>x₁</b> (row)</td><td>0</td><td>+1</td><td class="pivotcell">−1</td><td class="status">B, fixed at 0</td>
+        </tr>
+        <tr class="zrow">
+          <td><b>z (min)</b></td><td><b>0</b></td><td>—</td><td><b>r(x₂)=−2</b></td><td></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="step">
+      <b>Choose entering (pricing):</b> Minimization ⇒ a nonbasic at LB with <span class="math">r&lt;0</span> can enter.  
+      Here <span class="math">x₂</span> at LB has <span class="math">r(x₂)=−2</span> ⇒ <span class="pill enter">enter x₂ from LB</span>.
+    </div>
+
+    <div class="step">
+      <b>Augmented Ratio Test (ART):</b> direction in basic space is <span class="math">d = B⁻¹ a₂ = −1</span>.  
+      Basics move by <span class="math">Δx_B = −d·θ = +θ</span> in row x₁, i.e., <span class="math">Δx₁=+θ</span>.  
+      But x₁ already sits at its UB=0 ⇒ row limit <span class="math">θ_row = 0</span>.  
+      Opposite bound of entering: <span class="math">θ_bound = 1 − 0 = 1</span>.  
+      <b>Minimum is 0 with a row win</b> ⇒ <span class="pill leave">degenerate row pivot</span>.
+    </div>
+
+    <div class="step">
+      <b>Objective update:</b> <span class="math">Δz = r_enter · θ = (−2)·0 = 0</span> (unchanged).
+    </div>
+
+    <h3>Gauss–Jordan pivot (θ = 0): normalize pivot row & zero the entering column elsewhere</h3>
+    <ol>
+      <li>Normalize row x₁ by −1 → column x₂ becomes 1 in that row.</li>
+      <li>Zero the x₂ column in all other rows (here: the objective row).</li>
+      <li>Swap labels: x₂ becomes <b>basic</b>, x₁ leaves (nonbasic at its bound 0).</li>
+    </ol>
+
+    <h3>Tableau after the (degenerate) pivot</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Basic</th><th>RHS</th><th>x₁</th><th>x₂</th><th class="status">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="enter">
+          <td><b>x₂</b> (row)</td><td>0</td><td>−1</td><td>+1</td><td class="status">B</td>
+        </tr>
+        <tr class="zrow">
+          <td><b>z (min)</b></td><td><b>0</b></td><td><b>r(x₁)</b> (recomputed)</td><td>0</td><td></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p><b>Takeaway:</b> The basis changed (x₂ is basic), but the point and z stayed the same (θ=0).  
+    New reduced costs may now allow a non-degenerate improving step.</p>
+  </div>
+</div>
+
+<!-- ================================================================== -->
+<!-- 2) NON-DEGENERATE PIVOT (theta > 0)                                 -->
+<!-- ================================================================== -->
+<div class="card">
+  <div class="hd">Example B — Non-degenerate Row Pivot (θ &gt; 0)</div>
+  <div class="bd">
+    <div class="note">
+      <div><b>Problem (minimization):</b> <span class="math">min z = −(x₁ + x₂)</span></div>
+      <div><b>Equality row:</b> <span class="math">x₁ + x₂ = 1</span></div>
+      <div><b>Bounds:</b> <span class="math">0 ≤ x₁, x₂ ≤ 1</span></div>
+      <div><b>Start:</b> take <span class="math">x₂</span> basic ⇒ <span class="math">x₂=1, x₁=0</span></div>
+    </div>
+
+    <h3>Initial tableau (x₂ basic)</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Basic</th><th>RHS</th><th>x₁</th><th>x₂</th><th class="status">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="leave">
+          <td><b>x₂</b> (row)</td><td>1</td><td>+1</td><td class="pivotcell">+1</td><td class="status">B (at UB=1)</td>
+        </tr>
+        <tr class="zrow">
+          <td><b>z (min)</b></td><td><b>−1</b></td><td><b>r(x₁)=−1</b></td><td>0</td><td></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="step">
+      <b>Choose entering:</b> Minimization ⇒ LB nonbasic with <span class="math">r&lt;0</span>.  
+      Here <span class="math">x₁</span> at LB has <span class="math">r(x₁)=−1</span> ⇒ <span class="pill enter">enter x₁ from LB</span>.
+    </div>
+
+    <div class="step">
+      <b>ART:</b> direction from row is <span class="math">d = B⁻¹ a₁ = +1</span>.  
+      Basics change: <span class="math">Δx₂ = −d·θ = −θ</span>.  
+      Row limit (x₂ hitting LB=0): <span class="math">θ_row = (1−0)/1 = 1</span>.  
+      Opposite bound of entering x₁: <span class="math">θ_bound = 1 − 0 = 1</span>.  
+      Tie ⇒ <b>row pivot</b> at <span class="math">θ=1</span> (non-degenerate).
+    </div>
+
+    <div class="step">
+      <b>Objective update:</b> <span class="math">Δz = r_enter · θ = (−1)·1 = −1</span> ⇒ z: −1 → <b>−2</b>.
+    </div>
+
+    <h3>Gauss–Jordan pivot (θ = 1)</h3>
+    <ol>
+      <li>Normalize row x₂ by +1 → pivot element becomes 1.</li>
+      <li>Eliminate x₁ from all other rows (objective row).</li>
+      <li>Swap labels: x₁ becomes <b>basic</b>, x₂ leaves (goes to LB=0).</li>
+    </ol>
+
+    <h3>Tableau after the (non-degenerate) pivot</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Basic</th><th>RHS</th><th>x₁</th><th>x₂</th><th class="status">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="enter">
+          <td><b>x₁</b> (row)</td><td>1</td><td>+1</td><td>+1</td><td class="status">B</td>
+        </tr>
+        <tr class="zrow">
+          <td><b>z (min)</b></td><td><b>−2</b></td><td>0</td><td><b>r(x₂)=0</b></td><td></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p><b>Takeaway:</b> Here the step was positive (θ=1), so the primal point moved from (0,1) to (1,0) and the objective improved by −1. The entering’s reduced cost becomes 0 after the pivot because it is now basic.</p>
+  </div>
+</div>
+
+<!-- ================================================================== -->
+<!-- CHEAT SHEET                                                         -->
+<!-- ================================================================== -->
+<div class="card">
+  <div class="hd">Pivot Cheat-Sheet (Gauss–Jordan style)</div>
+  <div class="bd">
+    <ol>
+      <li><b>Pick entering</b> by reduced cost (respect LB/UB sign rules).</li>
+      <li><b>ART</b>: compute all row limits and the opposite-bound limit; choose the smallest positive θ.</li>
+      <li><b>If opposite bound strictly smallest</b> ⇒ preemptive bound hit (no pivot; update values, recompute reduced costs).</li>
+      <li><b>If a row wins/ties</b> ⇒ row pivot:
+        <ul>
+          <li>Normalize pivot row so pivot element = 1.</li>
+          <li>Eliminate the entering column in all other rows.</li>
+          <li>Swap basis labels (entering ↔ leaving).</li>
+          <li>Objective change: <span class="math">Δz = r_enter(before) · θ</span>. After pivot, <span class="math">r_enter = 0</span>.</li>
+        </ul>
+      </li>
+      <li><b>Degenerate pivot</b>: θ=0 but still do the row pivot to change the basis (point and z unchanged).</li>
+    </ol>
+  </div>
+</div>
+
+</main>
+</body>
+</html>

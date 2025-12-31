@@ -1,0 +1,152 @@
+add comprehensive complete unittest coverage of class BoundedAugmentedRatioTest method Test using only MSTest put in project Common.LinearProgramming.Test under namespace Common.LinearProgramming.Test.GoalProgramming.PreEmptive.Functional use TestCategory("BoundedAugmentedRatio") using this code
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Common.LinearProgramming.GoalProgramming.PreEmptive.Functional
+{
+    public interface IRatioTest
+    {
+        PivotType Test(PreEmptiveTableau Tableau);
+    }
+}
+using Common.LinearProgramming.Mathematics;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Common.LinearProgramming.GoalProgramming.PreEmptive.Functional
+{
+    public class BoundedAugmentedRatioTest : IRatioTest
+    {
+        public PivotType Test(PreEmptiveTableau Tableau)
+        {
+            var eps = Fraction.Epsilon;
+
+            int e = Tableau.KeyCollumn;   // entering column (≠ rhsCol)
+            int rhsCol = 0;
+            int objRow = Tableau.ObjectiveRow;
+
+            // Guard: entering must not be RHS column
+            if (e == rhsCol)
+            {
+                Tableau.Delta = 0;
+                Tableau.KeyRow = -1;
+                return PivotType.DegeneratePivot;
+            }
+
+            //Guard
+            var xE = Tableau.CollumnHeaders[e];
+            if (xE?.Bound == null)
+            {
+                Tableau.Delta = 0;
+                Tableau.KeyRow = -1;
+                return PivotType.DegeneratePivot;
+            }
+
+            var xEVal = xE.Value;
+            bool atLB = (xE.Bound.State == SolverBoundState.Lower);
+            bool atUB = (xE.Bound.State == SolverBoundState.Upper);
+            if (!atLB && !atUB)
+            {
+                Tableau.Delta = 0;
+                Tableau.KeyRow = -1;
+                return PivotType.DegeneratePivot;
+            }
+
+            //Two limits can stop us:
+
+            //(A) Row limit: a basic hits LB or UB. For each basic xBi
+            //with direction di:
+            var bestTheta = Fraction.MaxValue;
+            var bestRow = -1;
+
+            for (int i = 0; i < Tableau.RowHeaders.Count; i++)
+            {
+                if (i == objRow) continue;
+
+                var rh = Tableau.RowHeaders[i];
+                //if (rh.VariableType == VariableType.BASIC) continue;
+                if (rh.Priority != Tableau.CurrentPriority) continue;
+
+                var di = Tableau.Coefficients[e, i];
+                if (Fraction.Abs(di) <= eps) continue; //No movement in this basic variable 
+
+                var xBi = Tableau.Coefficients[rhsCol, i]; // RHS at col 0
+                var LB = rh.Bound?.Lower ?? Fraction.MinValue;
+                var UB = rh.Bound?.Upper ?? Fraction.MaxValue;
+
+                //If di > 0, then xBi is decreasing. Limit when it hits LB:
+                // xB_i → xB_i + (−di)·θ
+                if (di > eps && LB != Fraction.MinValue)
+                {
+                    var th = (xBi - LB) / di;          // LB hit
+                    if (th > eps && (th < bestTheta - eps || (Fraction.Abs(th - bestTheta) <= eps && i < bestRow)))
+                    {
+                        bestTheta = th;
+                        bestRow = i;
+                    }
+                }
+                else if (di < -1 * eps && UB != Fraction.MaxValue)
+                {
+                    var th = (UB - xBi) / (-1 * di);   // UB hit
+                    if (th > eps && (th < bestTheta - eps || (Fraction.Abs(th - bestTheta) <= eps && i < bestRow)))
+                    {
+                        bestTheta = th;
+                        bestRow = i;
+                    }
+                }
+            }
+
+            // (B) opposite-bound of entering var
+            Fraction thetaBound = atLB ? (xE.Bound.Upper - xEVal) : (xEVal - xE.Bound.Lower);
+            if (thetaBound < 0) thetaBound = 0;
+
+            var theta = Fraction.Min(thetaBound, bestTheta);
+            //Step size:
+            //Select the minimum positive step ∆ from row and bound limits. 
+            if (!(theta > eps) || Fraction.IsNaN(theta) || Fraction.IsInfinity(theta))
+            {
+                Tableau.Delta = 0;
+                Tableau.KeyRow = -1;
+                return PivotType.DegeneratePivot;
+            }
+
+            if (thetaBound + eps < bestTheta)
+            {
+                Tableau.Delta = thetaBound;
+                Tableau.KeyRow = -1;  // no leaving row; no pivot
+                return PivotType.PreEmptiveBoundHit;
+            }
+            else
+            {
+                if (bestRow < 0)
+                {
+                    // Shouldn't happen if theta == bestTheta, but be safe.
+                    Tableau.Delta = 0;
+                    Tableau.KeyRow = -1;
+                    return PivotType.DegeneratePivot;
+                }
+
+                Tableau.Delta = bestTheta;
+                Tableau.KeyRow = bestRow;
+                return PivotType.RowPivot;
+            }
+        }
+    }
+    
+}
+namespace Common.LinearProgramming.GoalProgramming.PreEmptive.Functional
+{
+    public enum PivotType
+    {
+        RowPivot,
+        PreEmptiveBoundHit,
+        DegeneratePivot
+    }
+}
+

@@ -1,0 +1,248 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath, amssymb, amsfonts, bm}
+\usepackage{geometry}
+\geometry{margin=1in}
+\usepackage{enumitem}
+
+\begin{document}
+
+\section*{1) Problem Template (Geometry $\to$ Linear Maps)}
+
+Given thrusters $(\mathbf{r}_i, \mathbf{a}_i)$, throttles $\mathbf{t} \in \mathbb{R}^m$ with bounds
+\[
+\boldsymbol{\ell} \le \mathbf{t} \le \mathbf{u}.
+\]
+
+Force:
+\[
+\mathbf{F} = A\,\mathbf{t} \in \mathbb{R}^3,
+\quad
+A = [\,\mathbf{a}_1 \;\cdots\; \mathbf{a}_m\,].
+\]
+
+Torque:
+\[
+\mathbf{T} = B\,\mathbf{t} \in \mathbb{R}^3,
+\quad
+B = [\,\mathbf{r}_1 \times \mathbf{a}_1 \;\cdots\; \mathbf{r}_m \times \mathbf{a}_m\,].
+\]
+
+Optional hard linear constraints:
+\[
+C\mathbf{t} + \mathbf{s} = \mathbf{b}, \qquad \mathbf{s} \ge 0.
+\]
+
+You will solve several staged LPs
+\[
+P_1 \succ P_2 \succ \cdots
+\]
+using lexicographic goal programming.
+
+\section*{2) Goals (All Linearizable)}
+
+Directional torque about unit axis $\mathbf{d}_T$:
+\[
+\max \ \mathbf{d}_T^\top \mathbf{T} = (\mathbf{d}_T^\top B)\,\mathbf{t}.
+\]
+
+Directional force along $\mathbf{d}_F$:
+\[
+\max \ \mathbf{d}_F^\top \mathbf{F} = (\mathbf{d}_F^\top A)\,\mathbf{t}.
+\]
+
+L1 magnitudes: introduce deviations $\mathbf{u}\ge 0$; e.g., minimize $\|\mathbf{T}\|_1$ using
+\[
+-\,\mathbf{u} \le B\mathbf{t} \le \mathbf{u}, \qquad \min \mathbf{1}^\top \mathbf{u}.
+\]
+
+Total thrust (fuel proxy): minimize $\mathbf{1}^\top \mathbf{t}$ or weighted sum $\mathbf{w}^\top \mathbf{t}$.
+
+\section*{3) Variables’ Status Inside the Simplex}
+
+Each original decision variable $t_j$ has a status:
+\begin{itemize}[nosep]
+\item LB if $t_j = \ell_j$ (nonbasic at lower bound),
+\item UB if $t_j = u_j$ (nonbasic at upper bound),
+\item B if basic (interior; except degeneracy).
+\end{itemize}
+
+Slack variables from $C\mathbf{t} + \mathbf{s} = \mathbf{b}$ are basic candidates with
+$\ell = 0$, $u = +\infty$.
+
+This keeps real bounds inside the algorithm—no substitutions like $t = \ell + \tilde{t}$.
+
+\section*{4) Reduced-Cost Eligibility Rules}
+
+Let $r_j$ be the reduced cost of nonbasic $t_j$.
+
+\textbf{Maximization:}
+\[
+\text{LB variable enters by increasing if } r_j > 0; \qquad
+\text{UB variable enters by decreasing if } r_j < 0.
+\]
+
+\textbf{Minimization:}
+\[
+\text{LB variable enters by increasing if } r_j < 0; \qquad
+\text{UB variable enters by decreasing if } r_j > 0.
+\]
+
+Use tolerance $\varepsilon_{rc}$ (e.g.\,$10^{-10}$) to ignore noise.
+
+\section*{5) Augmented Ratio Test With Opposite Bound}
+
+Suppose $t_e$ is eligible to enter.
+
+Direction:
+\[
+d_e = +1 \text{ if increasing from LB}, \qquad
+d_e = -1 \text{ if decreasing from UB}.
+\]
+
+Let
+\[
+\mathbf{d} := B^{-1} A_{:e},
+\]
+so basics change as:
+\[
+\Delta \mathbf{t}_B = -\,\mathbf{d}\,\Delta,\qquad
+\Delta t_e = d_e\,\Delta.
+\]
+
+\textbf{Row limits (a basic hits a bound):}
+
+If $d_e = +1$:
+\[
+\theta_i =
+\begin{cases}
+\dfrac{t_{B_i} - \ell_{B_i}}{d_i}, & d_i > 0,\\[6pt]
+\dfrac{u_{B_i} - t_{B_i}}{-d_i}, & d_i < 0.
+\end{cases}
+\]
+
+If $d_e = -1$: swap LB/UB and signs.
+
+\textbf{Opposite bound of entering:}
+\[
+\theta_{\text{bound}} =
+\begin{cases}
+u_e - t_e, & d_e = +1,\\
+t_e - \ell_e, & d_e = -1.
+\end{cases}
+\]
+
+Let
+\[
+\theta = \min\{\theta_{\text{bound}},\ \min_i \theta_i\}.
+\]
+
+If $\theta = \theta_{\text{bound}}$ strictly smaller (preemptive bound hit):
+\[
+t_e \leftarrow \text{opposite bound},\qquad
+\mathbf{t}_B \leftarrow \mathbf{t}_B - \mathbf{d}\,\theta\,d_e.
+\]
+No pivot. Recompute reduced costs and continue.
+
+If a row ties or wins: pivot that row/column. Entering becomes B, leaving becomes LB/UB.
+
+If $\theta = 0$: degeneracy. If row-limited, pivot; if bound-limited, just flip $t_e$'s status.
+
+Anti-cycling: use Bland’s rule.
+
+\section*{6) Feasible Start (Phase I, if Needed)}
+
+If $\mathbf{t}=\boldsymbol{\ell}$ doesn't satisfy equalities:
+
+Add artificial $\mathbf{a} \ge 0$ to $E\mathbf{t} = \mathbf{f}$:
+\[
+E\mathbf{t} + \mathbf{a} = \mathbf{f}.
+\]
+
+Phase I objective: minimize $\mathbf{1}^\top \mathbf{a}$ (or maximize $-\mathbf{1}^\top \mathbf{a}$).
+
+Run bounded simplex. If optimum $> 0$: infeasible. Else remove artificials, keep resulting basis, proceed to $P_1$.
+
+\section*{7) Lexicographic (Preemptive) Loop}
+
+For priorities $P_1 \succ P_2 \succ \cdots \succ P_K$:
+
+Stage $k$:
+\begin{enumerate}[nosep]
+\item Build stage-$k$ LP.
+\item Solve $\to$ value $Z_k^*$, solution $\mathbf{t}^{(k)}$.
+\item Lock achievement for next stage:
+\begin{itemize}[nosep]
+\item Equality goal: add as equality row.
+\item Max goal $g^\top \mathbf{t}$: lock $g^\top \mathbf{t} \ge Z_k^* - \delta$.
+\item Min goal $h^\top \mathbf{t}$: lock $h^\top \mathbf{t} \le Z_k^* + \delta$.
+\end{itemize}
+Convert $\le/\ge$ to equalities with slacks. Use tiny $\delta$.
+\item Warm-start next stage with current basis/statuses.
+\end{enumerate}
+
+\section*{8) What to Record in a Tableau}
+
+At each iteration, keep:
+\begin{itemize}[nosep]
+\item Row equations for basics with RHS.
+\item For each nonbasic $t_j$: value (LB or UB), reduced cost $r_j$.
+\item Status tags LB/UB/B for every variable.
+\item Objective row with reduced costs.
+\item Step decision: entering variable, direction ($\uparrow$ from LB or $\downarrow$ from UB),
+step $\theta$, bound hit or pivot (and which row left).
+\end{itemize}
+
+This is exactly what is needed to reproduce the full tableau with LB/UB/B tags.
+
+\section*{9) Negative Lower Bounds \& Other Details}
+
+Formulas use distances $(t-\ell)$ and $(u-t)$, so negative $\ell$ is fine.
+
+Unbounded sides: treat as $+\infty$ distance.
+
+Scaling: rescale rows/columns if magnitudes are large.
+
+Neutral directions: reduced cost $=0$ gives multiple optima; any representative works or use tiny tie-break weight.
+
+\section*{10) Common Two-Stage Pattern}
+
+\subsection*{Stage $P_1$ (Min Thrust)}
+
+\[
+\min \ \mathbf{1}^\top \mathbf{t}
+\quad \text{s.t.} \quad
+\mathbf{d}_T^\top B\,\mathbf{t} \ge \tau_{\min},\;
+\boldsymbol{\ell} \le \mathbf{t} \le \mathbf{u},\;
+C\mathbf{t} + \mathbf{s} = \mathbf{b}.
+\]
+
+Implement $\mathbf{d}_T^\top B\mathbf{t} \ge \tau_{\min}$ as
+\[
+-\,\mathbf{d}_T^\top B\,\mathbf{t} + s_\tau = -\tau_{\min}, \qquad s_\tau \ge 0.
+\]
+
+Solve with bounded simplex $\Rightarrow Z_1^*$.
+
+Lock using equality $\,\mathbf{1}^\top \mathbf{t} = Z_1^*$ (or $\le Z_1^* + \delta$).
+
+\subsection*{Stage $P_2$ (Max Torque)}
+
+\[
+\max \ \mathbf{d}_T^\top B\,\mathbf{t}
+\quad \text{s.t.} \quad
+\mathbf{1}^\top \mathbf{t} = Z_1^*,\;
+\boldsymbol{\ell} \le \mathbf{t} \le \mathbf{u},\;
+C\mathbf{t} + \mathbf{s} = \mathbf{b}.
+\]
+
+Run bounded simplex; you may see preemptive bound hits or row pivots as in examples.
+
+\section*{11) Stopping \& Optimality}
+
+For a stage:
+
+If no nonbasic variable satisfies eligibility (Sec.\ 4) $\Rightarrow$ optimal.
+
+If reduced costs $\approx 0$: you're on a face of optimal solutions; any LB/UB reassignments that keep feasibility preserve optimality.
+
+\end{document}

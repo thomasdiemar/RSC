@@ -2,10 +2,10 @@ namespace RCS
 {
     public class RcsThruster
     {
-        public RcsVector Direction { get; set; }
-        public RcsVector Position { get; set; }
+        public RcsVector<int> Direction { get; set; }
+        public RcsVector<int> Position { get; set; }
 
-        public RcsThruster(RcsVector direction, RcsVector position)
+        public RcsThruster(RcsVector<int> direction, RcsVector<int> position)
         {
             Direction = direction;
             Position = position;

@@ -1,7 +1,10 @@
-﻿namespace RCS
+using LinearSolver;
+using System.Collections.Generic;
+
+namespace RCS
 {
     public interface IRcsEngineOptimiser
     {
-        RcsEngineResult Optimise(RcsEngine engine, RcsCommand command);
+        IEnumerable<MyProgress<RcsEngineResult>> Optimise(RcsEngine engine, RcsCommand command);
     }
 }

@@ -1,12 +1,12 @@
 namespace RCS
 {
-    public struct RcsVector
+    public struct RcsVector<T>
     {
-        public double X { get; set; }
-        public double Y { get; set; }
-        public double Z { get; set; }
+        public T X { get; set; }
+        public T Y { get; set; }
+        public T Z { get; set; }
 
-        public RcsVector(double x, double y, double z)
+        public RcsVector(T x, T y, T z)
         {
             X = x;
             Y = y;

@@ -47,9 +47,8 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RcsCommand.cs" />
     <Compile Include="RcsEngine.cs" />
-    <Compile Include="ARcsEngineOptimiser.cs" />
-    <Compile Include="IRcsEngineOptimiser.cs" />
     <Compile Include="RcsEngineOptimiser.cs" />
+    <Compile Include="IRcsEngineOptimiser.cs" />
     <Compile Include="RcsEngineResult.cs" />
     <Compile Include="RcsThruster.cs" />
     <Compile Include="RcsVector.cs" />

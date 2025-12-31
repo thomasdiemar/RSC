@@ -1,6 +1,0 @@
-C:\Users\thoma\source\repos\RSC\LinearSolver\bin\Debug\LinearSolver.dll
-C:\Users\thoma\source\repos\RSC\LinearSolver\bin\Debug\LinearSolver.pdb
-C:\Users\thoma\source\repos\RSC\LinearSolver\obj\Debug\LinearSolver.csproj.AssemblyReference.cache
-C:\Users\thoma\source\repos\RSC\LinearSolver\obj\Debug\LinearSolver.csproj.CoreCompileInputs.cache
-C:\Users\thoma\source\repos\RSC\LinearSolver\obj\Debug\LinearSolver.dll
-C:\Users\thoma\source\repos\RSC\LinearSolver\obj\Debug\LinearSolver.pdb

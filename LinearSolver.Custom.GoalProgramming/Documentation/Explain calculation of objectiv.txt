@@ -1,0 +1,24 @@
+Explain calculation of objective and net evaluation row value in each step for minimization. 
+For priority 1 Show simplex table each step, explicit make every varible a basic varible, show Torque Tx,Ty,Tz in table as Basic Varibles, no shortcuts. Dont show and use show Fx,Fy,Fz and A1, A2 or other artificial.
+Focus on highlighting in yellow all operations reqarding Augmented ratio test (bounded feature) in simplex table.
+Focus on highlighting in green all operations regarding objective.
+Focus on highlighting in blue all operations regarding choosing the entering variable
+Focus on highlighting in red all discovered constraints and their influence on the table.
+Show all variable LB and UB status.
+User thrusters, cancel torque:
+r1 = (2, 2, 0)  a1 = (100, 100, 100)
+r2 = (-2, -2, 0) a2 = (100, 100, 100)
+r3 = (0, 2, 2)  a3 = (100, 100, 100)
+r4 = (0, -2, -2) a4 = (100, 100, 100)
+For priority 2: When torque canceled, add found constraints for torque. Explain constraints torque. Show calculation of objective and net evaluation row value in each step for minimization. 
+Show simplex table each step, explicit make every varible a basic varible, show locked Torque and Force Fx,Fy,Fz in table as Basic Varibles, no shortcuts. Set bounds t1 to 0.5
+
+
+2.
+explain ART in very small details, leave nothing out. Show all possible variations. Why are 2 nonbasic variables effected by on instance of selected column
+
+All other nonbasic variables do not move at all.
+(If it looks like another “nonbasic” moved, that means in your current basis that second variable is actually basic via some equality row—e.g., a coupling constraint.)
+
+
+Explain in detail degenerate row pivot

@@ -1,0 +1,130 @@
+\documentclass[a4paper,11pt]{article}
+
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{amsmath,amssymb}
+\usepackage{bm}
+\usepackage{unicode-math}
+\setmainfont{Latin Modern Roman}
+\setmathfont{Latin Modern Math}
+
+\title{Bounded Preemptive Goal Programming for a Six--Thruster System}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+We consider a spacecraft with six thrusters $T_1,\dots,T_6$, each with
+a scalar thrust level
+\[
+  u_i \in [0,1], \quad i=1,\dots,6.
+\]
+The position vectors $r_i$ and thrust directions $a_i$ are
+\begin{align*}
+  T_1 &: r_1 = (-1,-1,-1), & a_1 &= (0,0,1),\\
+  T_2 &: r_2 = ( 1,-1,-1), & a_2 &= (0,0,1),\\
+  T_3 &: r_3 = ( 0, 1,-1), & a_3 &= (0,0,1),\\[0.5em]
+  T_4 &: r_4 = (-1,-1, 1), & a_4 &= (0,0,-1),\\
+  T_5 &: r_5 = ( 1,-1, 1), & a_5 &= (0,0,-1),\\
+  T_6 &: r_6 = ( 0, 1, 1), & a_6 &= (0,0,-1).
+\end{align*}
+
+\section*{Net Force (Priority 1: Eliminate Force)}
+
+The net force is
+\[
+  \bm{F} = \sum_{i=1}^6 u_i a_i
+         = (0,0,F_z), \quad
+  F_z = u_1+u_2+u_3 - u_4 - u_5 - u_6.
+\]
+Priority 1 requires zero net force,
+\[
+  F_z = 0
+  \quad\Longrightarrow\quad
+  u_1+u_2+u_3 = u_4+u_5+u_6.
+\tag{F}
+\label{eq:force}
+\]
+
+\section*{Torque (Priority 2: Maximize $t_x$)}
+
+The torque from thruster $i$ is
+\[
+  \bm{\tau}_i = r_i \times (u_i a_i),
+\]
+and the total torque
+$\bm{\tau} = (t_x,t_y,t_z)$ is obtained by summing the contributions.
+A straightforward cross product computation yields
+\begin{align*}
+  t_x &= -u_1 - u_2 + u_3 + u_4 + u_5 - u_6,\\
+  t_y &= \phantom{-}u_1 - u_2 - u_4 + u_5,\\
+  t_z &= 0.
+\end{align*}
+Under the constraints \eqref{eq:force} and $0 \le u_i \le 1$,
+the maximum achievable value of $t_x$ is
+\[
+  t_x^{\max} = 2.
+\]
+Thus, for Priority 2 we impose the additional goal
+\[
+  t_x = 2.
+\tag{T$_x$}
+\label{eq:tx}
+\]
+
+\section*{Minimizing $t_y, t_z$ (Priority 3)}
+
+The torque component $t_z$ is identically zero for any feasible
+$\bm{u}$. Hence, Priority 3 reduces to minimizing $|t_y|$
+subject to \eqref{eq:force}, \eqref{eq:tx}, and $0 \le u_i \le 1$.
+
+Solving this system, one convenient family of solutions with
+$t_y = 0$ is
+\[
+  u_6 = 0,\quad u_3 = 1,\quad
+  u_4, u_5 \in \left[\tfrac12,1\right],\quad
+  u_1 = u_4 - \tfrac12,\quad
+  u_2 = u_5 - \tfrac12.
+\]
+Any choice in this family satisfies
+\[
+  \bm{F} = \bm{0}, \qquad
+  t_x = 2, \qquad
+  t_y = 0, \qquad
+  t_z = 0.
+\]
+
+A particularly simple solution (with minimal total thrust) is
+\[
+  (u_1,u_2,u_3,u_4,u_5,u_6)
+  = (0,0,1,0.5,0.5,0).
+\]
+We verify:
+\begin{align*}
+  \text{Force: } & u_1+u_2+u_3 = 0+0+1 = 1,\\
+                 & u_4+u_5+u_6 = 0.5+0.5+0 = 1
+                 \;\Rightarrow\; \bm{F} = (0,0,0),\\[0.5em]
+  \text{Torque: } &
+  t_x = -0 -0 +1 +0.5 +0.5 -0 = 2,\\
+  & t_y = 0 -0 -0.5 +0.5 = 0,\\
+  & t_z = 0.
+\end{align*}
+
+Thus, the thruster settings
+\[
+  T_1 = 0,\quad
+  T_2 = 0,\quad
+  T_3 = 1,\quad
+  T_4 = 0.5,\quad
+  T_5 = 0.5,\quad
+  T_6 = 0
+\]
+satisfy the bounded preemptive goal structure:
+\begin{enumerate}
+  \item Zero net force,
+  \item Maximal $t_x$,
+  \item Minimal $t_y$ and $t_z$ (both equal to zero).
+\end{enumerate}
+
+\end{document}

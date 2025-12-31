@@ -1,0 +1,160 @@
+\documentclass{article}
+\usepackage{amsmath, amssymb, amsfonts, geometry}
+\geometry{margin=1in}
+\begin{document}
+
+\title{Preemptive Goal Linear Programming for Torque-Neutral Thruster Firing}
+\author{}
+\date{}
+\maketitle
+
+\section{Thruster Geometry and Model}
+
+For each thruster \( i = 1, \dots, n \):
+\begin{itemize}
+    \item Position in body frame: \( \mathbf{r}_i \in \mathbb{R}^3 \)
+    \item Fixed firing direction: \( \mathbf{d}_i \in \mathbb{R}^3 \)
+    \item Thrust magnitude (decision variable): \( t_i \ge 0 \)
+\end{itemize}
+
+The resultant body-frame force and torque are:
+\begin{align}
+    \mathbf{F} &= \sum_{i=1}^{n} t_i \mathbf{d}_i, \\
+    \boldsymbol{\tau} &= \sum_{i=1}^{n} t_i \, (\mathbf{r}_i \times \mathbf{d}_i).
+\end{align}
+
+Define each thruster’s torque arm vector:
+\[
+\mathbf{h}_i := \mathbf{r}_i \times \mathbf{d}_i.
+\]
+
+\section{Linearized Constraints with Goal Variables}
+
+To maintain linearity, we introduce positive and negative deviation variables.
+
+\subsection*{Primary goal: Zero torque}
+\begin{equation}
+    \sum_i h_{i,k}\, t_i + e^{\tau,-}_k - e^{\tau,+}_k = 0, 
+    \qquad k \in \{x,y,z\}.
+\end{equation}
+
+\subsection*{Secondary goal: Desired force}
+\begin{equation}
+    \sum_i d_{i,k}\, t_i + e^{F,-}_k - e^{F,+}_k = F^{\text{des}}_k, 
+    \qquad k \in \{x,y,z\}.
+\end{equation}
+
+\subsection*{Bounds}
+\begin{equation}
+    0 \le t_i \le \overline{T}_i, 
+    \qquad e^{\tau,\pm}_k \ge 0, 
+    \qquad e^{F,\pm}_k \ge 0.
+\end{equation}
+
+\section{Preemptive (Lexicographic) Optimization}
+
+We solve a sequence of linear programs where higher-priority goals are strictly preserved.
+
+\subsection*{LP-1: Torque minimization}
+\begin{align}
+    \min \quad & \sum_k \left( e^{\tau,+}_k + e^{\tau,-}_k \right) \\
+    \text{s.t.} \quad & \text{All constraints above.}
+\end{align}
+
+Let the optimal value be \( Z_\tau^\star \).
+
+\subsection*{LP-2: Force minimization}
+\begin{align}
+    \min \quad & \sum_k \left( e^{F,+}_k + e^{F,-}_k \right) \\
+    \text{s.t.} \quad &
+    \sum_k \left( e^{\tau,+}_k + e^{\tau,-}_k \right) \le Z_\tau^\star, \\
+    & \text{All previous constraints.}
+\end{align}
+
+Let the optimal value be \( Z_F^\star \).
+
+\subsection*{LP-3: Optional tertiary objective (fuel use)}
+\begin{align}
+    \min \quad & \sum_i t_i \\
+    \text{s.t.} \quad &
+    \sum_k \left( e^{\tau,+}_k + e^{\tau,-}_k \right) \le Z_\tau^\star, \\
+    &
+    \sum_k \left( e^{F,+}_k + e^{F,-}_k \right) \le Z_F^\star.
+\end{align}
+
+This \emph{epsilon-constraint} sequence enforces strict preemptive priorities.
+
+\section{Single-Shot Weighted LP (Approximation)}
+
+For implementation simplicity, one can solve a single LP using large hierarchical weights:
+\begin{equation}
+    \min \quad 
+    W_\tau \sum_k (e^{\tau,+}_k + e^{\tau,-}_k)
+    + W_F \sum_k (e^{F,+}_k + e^{F,-}_k)
+    + \sum_i t_i,
+\end{equation}
+with \( W_\tau \gg W_F \gg 1 \).
+However, the sequential method is numerically more robust.
+
+\section{Matrix Formulation}
+
+Let \( \mathbf{t} \in \mathbb{R}^n \) stack all thruster thrusts.
+Define:
+\[
+H = 
+\begin{bmatrix}
+| & & | \\
+\mathbf{h}_1 & \dots & \mathbf{h}_n \\
+| & & |
+\end{bmatrix}, 
+\qquad 
+D = 
+\begin{bmatrix}
+| & & | \\
+\mathbf{d}_1 & \dots & \mathbf{d}_n \\
+| & & |
+\end{bmatrix}.
+\]
+
+Then:
+\begin{align}
+    H \mathbf{t} + \mathbf{e}^{\tau,-} - \mathbf{e}^{\tau,+} &= \mathbf{0}, \\
+    D \mathbf{t} + \mathbf{e}^{F,-} - \mathbf{e}^{F,+} &= \mathbf{F}^{\text{des}}, \\
+    0 \le \mathbf{t} &\le \overline{\mathbf{T}}.
+\end{align}
+
+\section{Practical Notes}
+\begin{itemize}
+    \item \textbf{Deadbands:} Replace \( = 0 \) with inequalities 
+    \( -\tau_{\text{max}} \le (H\mathbf{t})_k \le \tau_{\text{max}} \).
+    \item \textbf{Thruster saturation:} Already handled by \( 0 \le t_i \le \overline{T}_i \).
+    \item \textbf{Minimum impulse bit:} Add binaries \( y_i \in \{0,1\} \) and constraints 
+    \( t_i \ge t_i^{\min} y_i, \ t_i \le \overline{T}_i y_i \).
+    \item \textbf{Planar case:} Drop unused axes to reduce LP size.
+\end{itemize}
+
+\section{Example: Planar Case}
+
+For planar motion (controlling \(F_x\) and \(\tau_z\)):
+\begin{align}
+    F_x &= d_{1x}t_1 + d_{2x}t_2 + d_{3x}t_3, \\
+    \tau_z &= h_{1z}t_1 + h_{2z}t_2 + h_{3z}t_3.
+\end{align}
+
+\paragraph{LP-1:}
+\begin{align}
+    \min & \quad e^\tau_+ + e^\tau_- \\
+    \text{s.t.} & \quad h_{1z}t_1 + h_{2z}t_2 + h_{3z}t_3 + e^\tau_- - e^\tau_+ = 0, \\
+    & 0 \le t_i \le \overline{T}_i.
+\end{align}
+
+\paragraph{LP-2:}
+\begin{align}
+    \min & \quad e^F_+ + e^F_- \\
+    \text{s.t.} & \quad d_{1x}t_1 + d_{2x}t_2 + d_{3x}t_3 + e^F_- - e^F_+ = F_x^{\text{des}}, \\
+    & e^\tau_+ + e^\tau_- \le Z_\tau^\star.
+\end{align}
+
+Optionally, minimize \( \sum_i t_i \) as a tertiary step.
+
+\end{document}

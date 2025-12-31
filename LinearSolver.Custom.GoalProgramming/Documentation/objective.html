@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Bounded Preemptive Simplex (Minimization) — Torque Cancel Locks</title>
+<style>
+  body { font: 16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px; color: #222; }
+  h2 { margin-top: 1.75em; }
+  table { border-collapse: collapse; margin: 12px 0 4px; min-width: 680px; }
+  th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: right; }
+  th:first-child, td:first-child { text-align: left; }
+  .status { text-align: center; }
+  .zrow td, .zrow th { background: #fff3b0; font-weight: 600; }
+  .note { color: #444; margin: 0 0 18px; }
+  .good { color: #116611; font-weight: 600;}
+  .op   { color: #333; }
+  code  { background: #f6f8fa; padding: 2px 6px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<h1>Bounded Preemptive Simplex (Minimization) with Bounds — Objective & Net Evaluation Row</h1>
+
+<p class="note">
+<b>Geometry</b> produces torque-cancel locks: <code>t1 = t2</code>, <code>t3 = t4</code>. <br>
+We minimize <code>z = -(t1 + t2 + t3 + t4)</code> with bounds <code>0 ≤ t_i ≤ 1</code>. <br>
+Keep bounds inside simplex (LB/UB/B statuses). Nonbasics sit exactly at LB or UB.
+</p>
+
+<hr>
+
+<h2>Step 0 — Initial Tableau (minimization)</h2>
+<p class="note">
+Locks as rows; choose <b>t1</b> and <b>t3</b> basic, <b>t2</b> and <b>t4</b> nonbasic at LB (0).<br>
+Objective: <code>z = -2·t2 - 2·t4</code> ⇒ reduced costs: <code>r(t2) = -2</code>, <code>r(t4) = -2</code>. <span class="good">(For minimization, LB can enter if r &lt; 0.)</span>
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Basic</th><th>RHS</th><th>t2</th><th>t4</th><th>t1</th><th>t3</th><th class="status">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>t1 (lock)</td><td>0</td><td>+1</td><td>0</td><td>1</td><td>0</td><td class="status"><b>B</b></td></tr>
+    <tr><td>t3 (lock)</td><td>0</td><td>0</td><td>+1</td><td>0</td><td>1</td><td class="status"><b>B</b></td></tr>
+    <tr class="zrow">
+      <td><b>z (min)</b></td><td><b>0</b></td><td><b>-2</b></td><td><b>-2</b></td><td>0</td><td>0</td><td></td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="op"><b>Move:</b> Enter <b>t2↑</b> from LB (Bland). Ratio test: row t1 limit = 1, opposite bound of t2 = 1 → tie ⇒ <b>pivot</b> (enter t2, leave t1 to UB).</p>
+
+<hr>
+
+<h2>Step 1 — After Pivot on (row t1, col t2)</h2>
+<p class="note">
+Step size <code>θ = 1</code> ⇒ <code>t2 ← 1</code>, and from the lock row <code>t1 ← 1</code> (leaves to UB).<br>
+Rewriting the objective with the new basis zeroes the entering reduced cost:
+<code>z = -2 - 2·t4</code>. So RHS becomes <code>-2</code>, and <code>r(t2)=0</code>, <code>r(t4)=-2</code>.
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Basic</th><th>RHS</th><th>t2</th><th>t4</th><th>t1</th><th>t3</th><th class="status">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><b>t2</b></td><td>1</td><td>1</td><td>0</td><td>-1</td><td>0</td><td class="status"><b>B</b></td></tr>
+    <tr><td>t3</td><td>0</td><td>0</td><td>+1</td><td>0</td><td>1</td><td class="status"><b>B</b></td></tr>
+    <tr class="zrow">
+      <td><b>z (min)</b></td><td><b>-2</b></td><td><b>0</b></td><td><b>-2</b></td><td>0</td><td>0</td><td></td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="op"><b>Move:</b> Enter <b>t4↑</b> from LB. Ratio test: row t3 limit = 1, opposite bound t4 = 1 → tie ⇒ <b>pivot</b> (enter t4, leave t3 to UB).</p>
+
+<hr>
+
+<h2>Step 2 — After Pivot on (row t3, col t4) — Optimal</h2>
+<p class="note">
+Step size <code>θ = 1</code> ⇒ <code>t4 ← 1</code> and from the lock row <code>t3 ← 1</code> (leaves to UB).<br>
+Objective becomes constant: <code>z = -4</code>, reduced costs all zero at the corner ⇒ optimal.
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Basic</th><th>RHS</th><th>t2</th><th>t4</th><th>t1</th><th>t3</th><th class="status">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>t2</td><td>1</td><td>1</td><td>0</td><td>-1</td><td>0</td><td class="status"><b>B</b></td></tr>
+    <tr><td><b>t4</b></td><td>1</td><td>0</td><td>1</td><td>0</td><td>-1</td><td class="status"><b>B</b></td></tr>
+    <tr class="zrow">
+      <td><b>z (min)</b></td><td><b>-4</b></td><td><b>0</b></td><td><b>0</b></td><td>0</td><td>0</td><td></td>
+    </tr>
+  </tbody>
+</table>
+
+<hr>
+
+<h2>Key points about the objective & reduced costs (minimization)</h2>
+<ul class="note">
+  <li><b>Eligibility:</b> A nonbasic at <b>LB</b> may enter if <code>r &lt; 0</code>; a nonbasic at <b>UB</b> may enter if <code>r &gt; 0</code>.</li>
+  <li><b>After a pivot:</b> the entering variable’s reduced cost becomes <b>0</b>; the z-RHS changes by <code>(old r_enter) × θ</code>.</li>
+  <li><b>Bound hits (no pivot):</b> if the opposite bound of the entering wins the ratio test strictly, you just update values and z-RHS; the tableau coefficients stay the same.</li>
+</ul>
+
+<p class="note">
+Final throttles: <code>t1 = t2 = 1</code>, <code>t3 = t4 = 1</code> (all within [0,1]); torque is cancelled by locks; minimized objective <code>z* = -4</code> (equivalently, total thrust = 4).
+</p>
+
+</body>
+</html>

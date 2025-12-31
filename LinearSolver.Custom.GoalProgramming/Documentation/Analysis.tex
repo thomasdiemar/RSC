@@ -1,0 +1,33 @@
+\documentclass{article}
+\begin{document}
+  Hello World! http://www.personal.ceu.hu/tex/math.htm
+$ \alpha \beta \gamma $
+$ \frac{x}{y} $
+$  \int a^b $
+
+Convert the LP to the following form:
+Convert the minimization problem into a maximization one (by multiplying the objective function by -1).
+All variables must be non-negative.
+All RHS values must be non-negative (multiply both sides by -1, if needed).
+All constraints must be in £ form (except the non-negativity conditions). No strictly equality or ³ constraints are allowed.
+If this condition cannot be satisfied, then use the Initialization of the Simplex Method: Articicial-Free.
+
+Convert all £ constraints to equalities by adding a different slack variable for each one of them.
+Construct the initial simplex tableau with all slack variables in the BVS. The last row in the table contains the coefficient of the objective function (row Cj).
+
+Determine whether the current tableau is optimal. That is:
+If all RHS values are non-negative (called, the feasibility condition)
+If all elements of the last row, that is Cj row, are non-positive (called, the optimality condition).
+
+If the answers to both of these two questions are Yes, then stop. The current tableau contains an optimal solution.
+Otherwise, go to the next step.
+
+If the current BVS is not optimal, determine, which nonbasic variable should become a basic variable and, which basic variable should become a nonbasic variable. To find the new BVS with the better objective function value, perform the following tasks:
+Identify the entering variable: The entering variable is the one with the largest positive Cj value (In case of a tie, we select the variable that corresponds to the leftmost of the columns) .
+Identify the outgoing variable: The outgoing variable is the one with smallest non-negative column ratio (to find the column ratios, divide the RHS column by the entering variable column, wherever possible). In case of a tie we select the variable that corresponds to the upmost of the tied rows.
+Generate the new tableau: Perform the Gauss-Jordan pivoting operation to convert the entering column to an identity column vector (including the element in the Cj row).
+Go to step 4.
+
+
+
+\end{document} 
