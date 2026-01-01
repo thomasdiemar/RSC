@@ -37,18 +37,20 @@ jobs:
           -p "${{ secrets.AZURE_DEVOPS_NUGET_TOKEN }}" `
           --store-password-in-clear-text
         
-        # Use nuget.exe restore for better packages.config support
-        # Download nuget.exe if not present
-        if (-not (Test-Path "nuget.exe")) {
-          Write-Host "Downloading nuget.exe..."
-          Invoke-WebRequest -Uri "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe" -OutFile "nuget.exe"
-        }
-        
-        # Restore packages using nuget.exe
-        .\nuget.exe restore RCS.slnx -ConfigFile nuget.config -Verbosity quiet
+        # Restore only the projects we need to build/package (skip MSF)
+        dotnet restore LinearSolver/LinearSolver.csproj
+        dotnet restore LinearSolver.Custom/LinearSolver.Custom.csproj
+        dotnet restore RCS/RCS.csproj
+        dotnet restore RCS.Test/RCS.Test.csproj
     
     - name: Build solution (Release)
-      run: dotnet build RCS.slnx -c Release --no-restore
+      run: |
+        # Build only the projects we need (skip LinearSolver.MSF which has external dependencies)
+        dotnet build LinearSolver/LinearSolver.csproj -c Release --no-restore
+        dotnet build LinearSolver.Custom/LinearSolver.Custom.csproj -c Release --no-restore
+        dotnet build LinearSolver.Custom.GoalProgramming/LinearSolver.Custom.GoalProgramming.csproj -c Release --no-restore
+        dotnet build RCS/RCS.csproj -c Release --no-restore
+        dotnet build RCS.Test/RCS.Test.csproj -c Release --no-restore
     
     - name: Run tests
       run: dotnet test RCS.Test/RCS.Test.csproj -c Release --no-build --verbosity normal
