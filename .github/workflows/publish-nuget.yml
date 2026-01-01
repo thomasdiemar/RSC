@@ -25,13 +25,10 @@ jobs:
       env:
         NUGET_AUTH_TOKEN: ${{ secrets.AZURE_DEVOPS_NUGET_TOKEN }}
       run: |
-        # Try to update existing source, if it doesn't exist this will fail and we'll add it
-        dotnet nuget update source SpaceEngineers `
-          -u diemar `
-          -p "$env:NUGET_AUTH_TOKEN" `
-          --store-password-in-clear-text 2>$null || `
+        # Remove existing source if it exists (ignore errors if not present)
+        dotnet nuget remove source SpaceEngineers 2>$null || $true
         
-        # If update fails, add the source
+        # Add the source with authentication
         dotnet nuget add source https://diemar.pkgs.visualstudio.com/06ec9d7b-fe8e-4f72-a28e-3edb09ab1b81/_packaging/SpaceEngineers/nuget/v3/index.json `
           -n SpaceEngineers `
           -u diemar `
