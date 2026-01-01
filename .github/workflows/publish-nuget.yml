@@ -71,18 +71,47 @@ jobs:
         
         # For .NET Framework projects without SDK, rebuild with GeneratePackageOnBuild
         # This creates .nupkg files in bin\Release directories
+        Write-Host "Building LinearSolver with package generation..."
         dotnet build LinearSolver/LinearSolver.csproj -c Release /p:GeneratePackageOnBuild=true
+        if ($LASTEXITCODE -ne 0) { throw "LinearSolver build failed" }
+        
+        Write-Host "Building LinearSolver.Custom with package generation..."
         dotnet build LinearSolver.Custom/LinearSolver.Custom.csproj -c Release /p:GeneratePackageOnBuild=true
+        if ($LASTEXITCODE -ne 0) { throw "LinearSolver.Custom build failed" }
+        
+        Write-Host "Building RCS with package generation..."
         dotnet build RCS/RCS.csproj -c Release /p:GeneratePackageOnBuild=true
+        if ($LASTEXITCODE -ne 0) { throw "RCS build failed" }
+        
+        # Verify .nupkg files exist in bin\Release before copying
+        Write-Host "Checking for .nupkg files in bin directories..."
+        $linearSolverPkg = @(Get-ChildItem LinearSolver/bin/Release/*.nupkg -ErrorAction SilentlyContinue)
+        $customPkg = @(Get-ChildItem LinearSolver.Custom/bin/Release/*.nupkg -ErrorAction SilentlyContinue)
+        $rcsPkg = @(Get-ChildItem RCS/bin/Release/*.nupkg -ErrorAction SilentlyContinue)
+        
+        Write-Host "Found LinearSolver packages: $($linearSolverPkg.Count)"
+        Write-Host "Found LinearSolver.Custom packages: $($customPkg.Count)"
+        Write-Host "Found RCS packages: $($rcsPkg.Count)"
+        
+        if ($linearSolverPkg.Count -eq 0 -or $customPkg.Count -eq 0 -or $rcsPkg.Count -eq 0) {
+          Write-Host "ERROR: Expected packages not found in bin/Release directories!" -ForegroundColor Red
+          throw "Package generation failed"
+        }
         
         # Copy .nupkg files from bin\Release to nupkg directory
+        Write-Host "Copying packages to ./nupkg directory..."
         Copy-Item LinearSolver/bin/Release/*.nupkg ./nupkg/ -Force
         Copy-Item LinearSolver.Custom/bin/Release/*.nupkg ./nupkg/ -Force
         Copy-Item RCS/bin/Release/*.nupkg ./nupkg/ -Force
         
         # List created packages
         Write-Host "NuGet packages created:"
-        Get-ChildItem ./nupkg -Filter "*.nupkg" | ForEach-Object { Write-Host "  - $($_.Name) ($($_.Length) bytes)" }
+        $packages = @(Get-ChildItem ./nupkg -Filter "*.nupkg")
+        if ($packages.Count -eq 0) {
+          throw "No packages found in ./nupkg after copy!"
+        }
+        $packages | ForEach-Object { Write-Host "  - $($_.Name) ($($_.Length) bytes)" }
+        Write-Host "Total packages: $($packages.Count)"
     
     - name: Publish to Azure DevOps Feed
       run: |
