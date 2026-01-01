@@ -1,0 +1,29 @@
+## Summary
+
+Resolves the 'Could not install package' error caused by missing framework targeting in NuGet packages.
+
+## Changes
+
+- Created explicit `.nuspec` files with proper `.NETFramework4.7.2` targeting for:
+  - `LinearSolver` (1.0.0)
+  - `LinearSolver.Custom` (1.0.0)
+  - `RCS` (2.0.0)
+
+- Enhanced NuGet metadata in `LinearSolver.Custom.csproj`:
+  - Added symbol package support
+  - Added explicit include symbols configuration
+
+- Updated publish workflow to:
+  - Install NuGet CLI 6.8.0
+  - Use `.nuspec` files instead of `.csproj` for packing
+  - Ensures consistent framework targeting across all packages
+
+## Technical Details
+
+The previous publish workflow used `nuget pack` on `.csproj` files without explicit framework targeting. This caused NuGet to generate packages with incomplete or incorrect framework declarations. By using explicit `.nuspec` files with `targetFramework=".NETFramework4.7.2"` declarations, packages now properly declare compatibility with .NET Framework 4.7.2 projects.
+
+## Testing
+
+- All core packages build successfully in Release mode
+- Package structure verified with proper framework targeting
+- Dependencies correctly declared with version constraints
