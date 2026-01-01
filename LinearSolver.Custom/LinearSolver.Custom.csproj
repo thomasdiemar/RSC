@@ -14,7 +14,7 @@
     <Deterministic>true</Deterministic>
     <!-- NuGet Package Metadata -->
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <PackageId>PVS.LinearSolver.Custom</PackageId>
+    <PackageId>LinearSolver.Custom</PackageId>
     <Title>Custom Linear Solver - Goal Programming</Title>
     <Version>1.0.0</Version>
     <Authors>PVS</Authors>
