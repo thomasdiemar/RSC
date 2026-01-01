@@ -37,10 +37,13 @@ jobs:
           -p "${{ secrets.AZURE_DEVOPS_NUGET_TOKEN }}" `
           --store-password-in-clear-text
         
-        # Restore only the projects we need to build/package (skip MSF)
+        # Restore all projects (including MSF dependencies, but we won't build MSF)
         dotnet restore LinearSolver/LinearSolver.csproj
         dotnet restore LinearSolver.Custom/LinearSolver.Custom.csproj
+        dotnet restore LinearSolver.Custom.GoalProgramming/LinearSolver.Custom.GoalProgramming.csproj
+        dotnet restore LinearSolver.MSF/LinearSolver.MSF.csproj
         dotnet restore RCS/RCS.csproj
+        dotnet restore RCS.MSF/RCS.MSF.csproj
         dotnet restore RCS.Test/RCS.Test.csproj
     
     - name: Build solution (Release)
