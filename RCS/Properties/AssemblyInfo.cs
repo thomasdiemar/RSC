@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("RCS")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("PVS")]
+[assembly: AssemblyCompany("Diemar Consulting")]
 [assembly: AssemblyProduct("RCS")]
 [assembly: AssemblyCopyright("Copyright © PVS 2025")]
 [assembly: AssemblyTrademark("")]
