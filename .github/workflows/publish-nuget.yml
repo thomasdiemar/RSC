@@ -26,10 +26,7 @@ jobs:
         AZURE_DEVOPS_NUGET_TOKEN: ${{ secrets.AZURE_DEVOPS_NUGET_TOKEN }}
       run: |
         # Configure NuGet authentication before restoring
-        # We use --configfile to point to our nuget.config with the feed source
-        # and pass credentials via command line with the PAT token
-        
-        # First, ensure the source is configured (remove if exists to avoid conflicts)
+        # Remove existing source to avoid conflicts
         dotnet nuget remove source SpaceEngineers 2>$null || $null
         
         # Add the Azure DevOps feed with explicit authentication
@@ -40,8 +37,15 @@ jobs:
           -p "${{ secrets.AZURE_DEVOPS_NUGET_TOKEN }}" `
           --store-password-in-clear-text
         
-        # Now restore dependencies
-        dotnet restore RCS.slnx
+        # Use nuget.exe restore for better packages.config support
+        # Download nuget.exe if not present
+        if (-not (Test-Path "nuget.exe")) {
+          Write-Host "Downloading nuget.exe..."
+          Invoke-WebRequest -Uri "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe" -OutFile "nuget.exe"
+        }
+        
+        # Restore packages using nuget.exe
+        .\nuget.exe restore RCS.slnx -ConfigFile nuget.config -Verbosity quiet
     
     - name: Build solution (Release)
       run: dotnet build RCS.slnx -c Release --no-restore
