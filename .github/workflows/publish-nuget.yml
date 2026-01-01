@@ -72,15 +72,39 @@ jobs:
         # Use nuget.exe to pack .NET Framework projects
         # nuget pack reads metadata from .csproj files
         Write-Host "Packing LinearSolver..."
-        nuget pack LinearSolver/LinearSolver.csproj -Properties Configuration=Release -OutputDirectory ./nupkg
+        nuget pack LinearSolver/LinearSolver.csproj -Properties Configuration=Release -OutputDirectory ./nupkg -IncludeReferencedProjects
         if ($LASTEXITCODE -ne 0) { throw "LinearSolver pack failed" }
         
         Write-Host "Packing LinearSolver.Custom..."
-        nuget pack LinearSolver.Custom/LinearSolver.Custom.csproj -Properties Configuration=Release -OutputDirectory ./nupkg
+        nuget pack LinearSolver.Custom/LinearSolver.Custom.csproj -Properties Configuration=Release -OutputDirectory ./nupkg -IncludeReferencedProjects
         if ($LASTEXITCODE -ne 0) { throw "LinearSolver.Custom pack failed" }
         
+        # For RCS, we need to skip the packages.config resolution
+        # Create a .nuspec file with minimal metadata
+        Write-Host "Creating .nuspec for RCS..."
+        @"
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>PVS.RCS</id>
+    <version>1.0.0</version>
+    <authors>PVS</authors>
+    <description>Reaction Control System (RCS) engine optimizer using linear programming.</description>
+    <licenseExpression>MIT</licenseExpression>
+    <projectUrl>https://github.com/thomasdiemar/RSC</projectUrl>
+    <dependencies>
+      <dependency id="PVS.LinearSolver.Custom" version="1.0.0" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="RCS\bin\Release\RCS.dll" target="lib\net472\" />
+    <file src="RCS\bin\Release\RCS.pdb" target="lib\net472\" />
+  </files>
+</package>
+"@ | Out-File -Encoding UTF8 RCS.nuspec
+        
         Write-Host "Packing RCS..."
-        nuget pack RCS/RCS.csproj -Properties Configuration=Release -OutputDirectory ./nupkg
+        nuget pack RCS.nuspec -OutputDirectory ./nupkg
         if ($LASTEXITCODE -ne 0) { throw "RCS pack failed" }
         
         # Verify packages were created
