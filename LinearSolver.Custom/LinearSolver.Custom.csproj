@@ -22,6 +22,9 @@
     <PackageTags>linear-solver;goal-programming;optimization</PackageTags>
     <RepositoryUrl>https://github.com/thomasdiemar/RSC</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <TargetFrameworks></TargetFrameworks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
