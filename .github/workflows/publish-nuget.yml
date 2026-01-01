@@ -69,10 +69,16 @@ jobs:
           New-Item -ItemType Directory -Path "./nupkg" | Out-Null
         }
         
-        # For .NET Framework projects, use dotnet msbuild with Pack target
-        dotnet msbuild LinearSolver/LinearSolver.csproj /p:Configuration=Release /p:GeneratePackageOnBuild=true /p:PackageOutputPath=$PWD/nupkg /t:Pack
-        dotnet msbuild LinearSolver.Custom/LinearSolver.Custom.csproj /p:Configuration=Release /p:GeneratePackageOnBuild=true /p:PackageOutputPath=$PWD/nupkg /t:Pack
-        dotnet msbuild RCS/RCS.csproj /p:Configuration=Release /p:GeneratePackageOnBuild=true /p:PackageOutputPath=$PWD/nupkg /t:Pack
+        # For .NET Framework projects without SDK, rebuild with GeneratePackageOnBuild
+        # This creates .nupkg files in bin\Release directories
+        dotnet build LinearSolver/LinearSolver.csproj -c Release /p:GeneratePackageOnBuild=true
+        dotnet build LinearSolver.Custom/LinearSolver.Custom.csproj -c Release /p:GeneratePackageOnBuild=true
+        dotnet build RCS/RCS.csproj -c Release /p:GeneratePackageOnBuild=true
+        
+        # Copy .nupkg files from bin\Release to nupkg directory
+        Copy-Item LinearSolver/bin/Release/*.nupkg ./nupkg/ -Force
+        Copy-Item LinearSolver.Custom/bin/Release/*.nupkg ./nupkg/ -Force
+        Copy-Item RCS/bin/Release/*.nupkg ./nupkg/ -Force
         
         # List created packages
         Write-Host "NuGet packages created:"
