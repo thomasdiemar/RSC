@@ -105,6 +105,7 @@ jobs:
         foreach ($nupkg in Get-ChildItem ./nupkg -Filter "*.nupkg") {
           dotnet nuget push $nupkg.FullName `
             -s SpaceEngineers `
+            -k AzureDevOps `
             --skip-duplicate
         }
     
