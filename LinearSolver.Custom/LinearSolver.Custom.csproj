@@ -59,4 +59,5 @@
     <ProjectReference Include="..\LinearSolver\LinearSolver.csproj" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(NuGetPackageRoot)nuget.build.tasks.pack\*\build\NuGet.Build.Tasks.Pack.targets" Condition="Exists('$(NuGetPackageRoot)nuget.build.tasks.pack\')" />
 </Project>
