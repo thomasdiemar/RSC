@@ -3,8 +3,7 @@ name: Publish NuGet Packages
 on:
   push:
     branches:
-      - main
-      - fraction
+      - 'version*'
     tags:
       - 'v*'
 
@@ -45,6 +44,34 @@ jobs:
         dotnet restore RCS/RCS.csproj
         dotnet restore RCS.MSF/RCS.MSF.csproj
         dotnet restore RCS.Test/RCS.Test.csproj
+    
+    - name: Update assembly versions from branch name
+      run: |
+        # Extract version from branch name (e.g., version1.2.3 -> 1.2.3.0)
+        $branchName = "${{ github.ref }}" -replace 'refs/heads/', ''
+        $version = $branchName -replace 'version', ''
+        $version = $version -replace '[^0-9.]', ''
+        
+        # Ensure version has 4 parts (major.minor.build.revision)
+        $parts = $version.Split('.')
+        while ($parts.Count -lt 4) {
+          $parts += "0"
+        }
+        $version = $parts[0..3] -join '.'
+        
+        Write-Host "Branch: $branchName"
+        Write-Host "Extracted Version: $version"
+        
+        # Update all AssemblyInfo.cs files
+        Get-ChildItem -Recurse -Filter "AssemblyInfo.cs" | Where-Object { $_.FullName -notmatch '(obj|bin)' } | ForEach-Object {
+          Write-Host "Updating: $($_.FullName)"
+          $content = Get-Content $_.FullName -Raw -Encoding UTF8
+          $content = $content -replace '\[assembly: AssemblyVersion\(".*?"\)\]', "[assembly: AssemblyVersion(`"$version`")]"
+          $content = $content -replace '\[assembly: AssemblyFileVersion\(".*?"\)\]', "[assembly: AssemblyFileVersion(`"$version`")]"
+          Set-Content -Path $_.FullName -Value $content -Encoding UTF8
+        }
+        
+        Write-Host "AssemblyVersion update complete!"
     
     - name: Build solution (Release)
       run: |
