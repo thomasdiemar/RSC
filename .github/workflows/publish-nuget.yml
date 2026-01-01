@@ -69,11 +69,10 @@ jobs:
           New-Item -ItemType Directory -Path "./nupkg" | Out-Null
         }
         
-        # For .NET Framework projects, use MSBuild with Pack target
-        # This will use GeneratePackageOnBuild property if set in project files
-        msbuild LinearSolver/LinearSolver.csproj /p:Configuration=Release /p:GeneratePackageOnBuild=true /p:PackageOutputPath=$PWD/nupkg /t:Pack
-        msbuild LinearSolver.Custom/LinearSolver.Custom.csproj /p:Configuration=Release /p:GeneratePackageOnBuild=true /p:PackageOutputPath=$PWD/nupkg /t:Pack
-        msbuild RCS/RCS.csproj /p:Configuration=Release /p:GeneratePackageOnBuild=true /p:PackageOutputPath=$PWD/nupkg /t:Pack
+        # For .NET Framework projects, use dotnet msbuild with Pack target
+        dotnet msbuild LinearSolver/LinearSolver.csproj /p:Configuration=Release /p:GeneratePackageOnBuild=true /p:PackageOutputPath=$PWD/nupkg /t:Pack
+        dotnet msbuild LinearSolver.Custom/LinearSolver.Custom.csproj /p:Configuration=Release /p:GeneratePackageOnBuild=true /p:PackageOutputPath=$PWD/nupkg /t:Pack
+        dotnet msbuild RCS/RCS.csproj /p:Configuration=Release /p:GeneratePackageOnBuild=true /p:PackageOutputPath=$PWD/nupkg /t:Pack
         
         # List created packages
         Write-Host "NuGet packages created:"
