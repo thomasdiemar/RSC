@@ -12,6 +12,16 @@
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
+    <!-- NuGet Package Metadata -->
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageId>PVS.LinearSolver</PackageId>
+    <Title>Linear Solver Base</Title>
+    <Version>1.0.0</Version>
+    <Authors>PVS</Authors>
+    <Description>Base interfaces and utilities for linear solver implementations using exact rational arithmetic with Fraction types.</Description>
+    <PackageTags>linear-solver;fraction;optimization</PackageTags>
+    <RepositoryUrl>https://github.com/thomasdiemar/RSC</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
