@@ -82,7 +82,7 @@ jobs:
         # For RCS, we need to skip the packages.config resolution
         # Create a minimal .nuspec file with only essential metadata
         Write-Host "Creating .nuspec for RCS..."
-        $nuspecContent = @('<?xml version="1.0" encoding="utf-8"?>', '<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">', '<metadata>', '<id>RCS</id>', '<version>1.0.0</version>', '<authors>Diemar Consulting</authors>', '<description>Reaction Control System (RCS) engine optimizer.</description>', '<license type="expression">MIT</license>', '<projectUrl>https://github.com/thomasdiemar/RSC</projectUrl>', '<dependencies>', '<dependency id="PVS.LinearSolver.Custom" version="1.0.0" />', '</dependencies>', '</metadata>', '<files>', '<file src="RCS\bin\Release\RCS.dll" target="lib\net472\" />', '</files>', '</package>')
+        $nuspecContent = @('<?xml version="1.0" encoding="utf-8"?>', '<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">', '<metadata>', '<id>RCS</id>', '<version>1.0.0</version>', '<authors>Diemar Consulting</authors>', '<description>Reaction Control System (RCS) engine optimizer.</description>', '<license type="expression">MIT</license>', '<projectUrl>https://github.com/thomasdiemar/RSC</projectUrl>', '<dependencies>', '<dependency id="LinearSolver.Custom" version="1.0.0" />', '</dependencies>', '</metadata>', '<files>', '<file src="RCS\bin\Release\RCS.dll" target="lib\net472\" />', '</files>', '</package>')
         Set-Content -Path RCS.nuspec -Value $nuspecContent -Encoding UTF8
         
         Write-Host "Packing RCS..."
