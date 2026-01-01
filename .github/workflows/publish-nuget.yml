@@ -21,16 +21,27 @@ jobs:
       with:
         dotnet-version: '6.0.x'
     
-    - name: Configure NuGet authentication
+    - name: Restore dependencies
       env:
         AZURE_DEVOPS_NUGET_TOKEN: ${{ secrets.AZURE_DEVOPS_NUGET_TOKEN }}
       run: |
-        # The nuget.config file will use AZURE_DEVOPS_NUGET_TOKEN environment variable
-        # for authentication to the SpaceEngineers feed
-        Write-Host "NuGet authentication environment variable is set"
-    
-    - name: Restore dependencies
-      run: dotnet restore RCS.slnx
+        # Configure NuGet authentication before restoring
+        # We use --configfile to point to our nuget.config with the feed source
+        # and pass credentials via command line with the PAT token
+        
+        # First, ensure the source is configured (remove if exists to avoid conflicts)
+        dotnet nuget remove source SpaceEngineers 2>$null || $null
+        
+        # Add the Azure DevOps feed with explicit authentication
+        dotnet nuget add source `
+          https://diemar.pkgs.visualstudio.com/06ec9d7b-fe8e-4f72-a28e-3edb09ab1b81/_packaging/SpaceEngineers/nuget/v3/index.json `
+          -n SpaceEngineers `
+          -u diemar `
+          -p "${{ secrets.AZURE_DEVOPS_NUGET_TOKEN }}" `
+          --store-password-in-clear-text
+        
+        # Now restore dependencies
+        dotnet restore RCS.slnx
     
     - name: Build solution (Release)
       run: dotnet build RCS.slnx -c Release --no-restore
