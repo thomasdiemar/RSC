@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>LinearSolver.Custom</id>
+    <version>1.0.0</version>
+    <authors>PVS</authors>
+    <license type="expression">MIT</license>
+    <projectUrl>https://github.com/thomasdiemar/RSC</projectUrl>
+    <description>Custom goal-based linear solver implementation using preemptive goal programming without external dependencies.</description>
+    <tags>linear-solver;goal-programming;optimization</tags>
+    <dependencies>
+      <group targetFramework=".NETFramework4.7.2">
+        <dependency id="LinearSolver" version="[1.0.0]" />
+      </group>
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="bin\Release\LinearSolver.Custom.dll" target="lib\net472\LinearSolver.Custom.dll" />
+    <file src="bin\Release\LinearSolver.Custom.pdb" target="lib\net472\LinearSolver.Custom.pdb" />
+  </files>
+</package>
