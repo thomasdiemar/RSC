@@ -25,7 +25,7 @@ This single package includes:
 
 ## Projects
 - `RCS` – core domain types (vectors, thrusters, engine, command) plus the generic `RcsEngineOptimiser` that builds the coefficient matrix and desired vector from a fleet of thrusters.
-- `RCS.Custom` – optimiser wired to a custom goal solver (`CustomGoalLinearSolver`) that searches bounded thrust levels without MSF.
+- `RCS.Custom` – optimiser wired to a custom linear solver that searches bounded thrust levels without MSF.
 - `RCS.MSF` – optimiser wired to the Microsoft Solver Foundation goal-based solver (`MsfGoalLinearSolver`) as the reference implementation.
 - `LinearSolver` – shared solver interface and progress type.
 - `LinearSolver.Custom` / `LinearSolver.Custom.GoalProgramming` – concrete custom solver implementations (now bundled in RCS v2.0.0+).
