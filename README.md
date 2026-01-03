@@ -13,8 +13,7 @@ As of v2.0.0, all core projects are consolidated into a **single `RCS` NuGet pac
 
 This single package includes:
 - `LinearSolver` – solver interfaces and utilities
-- `LinearSolver.Custom` – custom goal programming solver
-- `LinearSolver.Custom.GoalProgramming` – goal programming implementation
+- `LinearSolver.Custom.GoalProgramming` – goal programming solver implementation
 - `RCS` – core domain types and engine optimizer
 - `RCS.Custom` – custom solver wired optimization
 
@@ -28,7 +27,7 @@ This single package includes:
 - `RCS.Custom` – optimiser wired to a custom linear solver that searches bounded thrust levels without MSF.
 - `RCS.MSF` – optimiser wired to the Microsoft Solver Foundation goal-based solver (`MsfGoalLinearSolver`) as the reference implementation.
 - `LinearSolver` – shared solver interface and progress type.
-- `LinearSolver.Custom` / `LinearSolver.Custom.GoalProgramming` – concrete custom solver implementations (now bundled in RCS v2.0.0+).
+- `LinearSolver.Custom.GoalProgramming` – goal programming solver implementation (now bundled in RCS v2.0.0+).
 - `LinearSolver.MSF` – MSF-based solver implementation (optional dependency).
 - `RCS.Test` – MSTest suite that validates solver behaviour across several thruster layouts (12 thrusters, 3Fx, 3Opposite, 4Fx) and all force/torque directions, including soft-goal scenarios.
 

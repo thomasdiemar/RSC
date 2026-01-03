@@ -80,7 +80,6 @@ foreach ($file in $assemblyInfoFiles) {
 
 $csprojFiles = @(
     "LinearSolver\LinearSolver.csproj",
-    "LinearSolver.Custom\LinearSolver.Custom.csproj",
     "LinearSolver.Custom.GoalProgramming\LinearSolver.Custom.GoalProgramming.csproj",
     "RCS\RCS.csproj",
     "RCS.Custom\RCS.Custom.csproj"

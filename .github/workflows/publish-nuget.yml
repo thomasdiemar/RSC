@@ -38,7 +38,6 @@ jobs:
         
         # Restore all projects (including MSF dependencies, but we won't build MSF)
         dotnet restore LinearSolver/LinearSolver.csproj
-        dotnet restore LinearSolver.Custom/LinearSolver.Custom.csproj
         dotnet restore LinearSolver.Custom.GoalProgramming/LinearSolver.Custom.GoalProgramming.csproj
         dotnet restore LinearSolver.MSF/LinearSolver.MSF.csproj
         dotnet restore RCS/RCS.csproj
@@ -57,13 +56,10 @@ jobs:
     
     - name: Build solution (Release)
       run: |
-        # Build all 5 core projects needed for consolidated RCS package
+        # Build all 4 core projects needed for consolidated RCS package
         # Skip projects that depend on MSF (LinearSolver.MSF, RCS.MSF, RCS.Test)
         Write-Host "Building LinearSolver..."
         dotnet build LinearSolver/LinearSolver.csproj -c Release --no-restore
-        
-        Write-Host "Building LinearSolver.Custom..."
-        dotnet build LinearSolver.Custom/LinearSolver.Custom.csproj -c Release --no-restore
         
         Write-Host "Building LinearSolver.Custom.GoalProgramming..."
         dotnet build LinearSolver.Custom.GoalProgramming/LinearSolver.Custom.GoalProgramming.csproj -c Release --no-restore

@@ -15,9 +15,6 @@
     <!-- LinearSolver assemblies -->
     <file src="..\LinearSolver\bin\Release\LinearSolver.dll" target="lib\net471\LinearSolver.dll" />
     <file src="..\LinearSolver\bin\Release\LinearSolver.pdb" target="lib\net471\LinearSolver.pdb" />
-    <!-- LinearSolver.Custom assemblies -->
-    <file src="..\LinearSolver.Custom\bin\Release\LinearSolver.Custom.dll" target="lib\net471\LinearSolver.Custom.dll" />
-    <file src="..\LinearSolver.Custom\bin\Release\LinearSolver.Custom.pdb" target="lib\net471\LinearSolver.Custom.pdb" />
     <!-- LinearSolver.Custom.GoalProgramming assemblies -->
     <file src="..\LinearSolver.Custom.GoalProgramming\bin\Release\LinearSolver.Custom.GoalProgramming.dll" target="lib\net471\LinearSolver.Custom.GoalProgramming.dll" />
     <file src="..\LinearSolver.Custom.GoalProgramming\bin\Release\LinearSolver.Custom.GoalProgramming.pdb" target="lib\net471\LinearSolver.Custom.GoalProgramming.pdb" />

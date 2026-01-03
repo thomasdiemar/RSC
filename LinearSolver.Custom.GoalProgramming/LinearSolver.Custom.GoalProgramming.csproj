@@ -64,7 +64,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\LinearSolver\LinearSolver.csproj" />
-    <ProjectReference Include="..\LinearSolver.Custom\LinearSolver.Custom.csproj" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
