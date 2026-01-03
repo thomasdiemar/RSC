@@ -4,6 +4,6 @@
   <Project Path="LinearSolver/LinearSolver.csproj" Id="db10db18-2fa4-486e-9151-b401ab42eb52" />
   <Project Path="RCS.Test/RCS.Test.csproj" />
   <Project Path="RCS/RCS.csproj" Id="43caae72-eca1-4b4b-9ff6-9a64e7d1531e" />
-  <Project Path="RCS.MSF/RCS.MSF.csproj" />
+  <Project Path="RCS.MSF/RCS.MSF.csproj" Id="dac5d36d-555e-4c4f-a455-024955229ec2" />
   <Project Path="ThrusterVisualizer/ThrusterVisualizer.csproj" Id="fa2abdac-090b-4c15-8587-3e7523c612dd" />
 </Solution>

@@ -1,8 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using RCS;
-using LinearSolver.Custom;
-using System.Collections.Generic;
-using System.Linq;
 using LinearSolver;
 
 namespace ThrusterOptimizationTests
@@ -216,6 +212,24 @@ namespace ThrusterOptimizationTests
             Assert.IsTrue(result.ResultantTorque.Z < 0, "Expected negative torque around Z axis");
         }
 
+        [TestMethod]
+        public void ThrustersUnity()
+        {
+            var thrusters = ThrusterTestData.CreateThrustersUnity();
+
+            var engine = new RcsEngine(thrusters);
+            var optimiser = new RcsEngineOptimiser<LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex.LexicographicGoalSolver>();
+
+            var command = new RcsCommand(new RcsVector<Fraction>(0,0,-1), new RcsVector<Fraction>(0, 0, 0));
+            var result = optimiser.Optimise(engine, command).ToList().Last().Result;
+
+
+            LogResult("Min Fz", result);
+
+            const double expectedFz = -40.0;
+            const double tolerance = 1e-6;
+            Assert.AreEqual(expectedFz, result.ResultantForce.Z, tolerance, "F_z does not match minimum achievable value");
+        }
 
         private void LogResult(string title, RcsEngineResult result)
         {

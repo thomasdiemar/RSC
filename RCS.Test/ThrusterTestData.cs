@@ -92,5 +92,18 @@ namespace ThrusterOptimizationTests
                 ["T2"] = new RcsThruster(new RcsVector<int>(0, 0, 1), new RcsVector<int>(-1*c, d, 1))
             };
         }
+        
+        public static Dictionary<string, RcsThruster> CreateThrustersUnity()
+        {
+            return new Dictionary<string, RcsThruster>
+            {
+                ["T1"] = new RcsThruster(new RcsVector<int>(0, 0, -10), new RcsVector<int>(-1, -1, 0)),
+                ["T2"] = new RcsThruster(new RcsVector<int>(0, 0, -10), new RcsVector<int>(1, -1, 0)),
+                ["T3"] = new RcsThruster(new RcsVector<int>(0, 0, -10), new RcsVector<int>(-1, 1, 0)),
+                ["T4"] = new RcsThruster(new RcsVector<int>(0, 0, -10), new RcsVector<int>(1, 1, 0))
+            };
+        }
+
+
     }
 }
