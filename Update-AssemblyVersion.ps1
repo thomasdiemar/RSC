@@ -152,7 +152,34 @@ foreach ($relPath in $csprojFiles) {
 }
 
 # ============================================================================
-# PHASE 3C: Validate version consistency
+# PHASE 3C: Update nuspec <version> property
+# ============================================================================
+
+$nuspecPath = Join-Path $ProjectRoot "RCS\RCS.nuspec"
+
+if (Test-Path $nuspecPath) {
+    Write-Host "`nUpdating RCS.nuspec version:" -ForegroundColor Yellow
+    
+    try {
+        [xml]$nuspec = Get-Content $nuspecPath -Encoding UTF8
+        $currentVersion = $nuspec.package.metadata.version
+        
+        if ($currentVersion -ne $csprojVersion) {
+            $nuspec.package.metadata.version = $csprojVersion
+            $nuspec.Save($nuspecPath)
+            Write-Host "  - RCS.nuspec" -ForegroundColor Gray
+            Write-Host "    ✓ Updated from $currentVersion to $csprojVersion" -ForegroundColor Green
+        } else {
+            Write-Host "  - RCS.nuspec" -ForegroundColor Gray
+            Write-Host "    ℹ Already set to $csprojVersion" -ForegroundColor Yellow
+        }
+    } catch {
+        Write-Host "  ✗ Error updating nuspec: $_" -ForegroundColor Red
+    }
+}
+
+# ============================================================================
+# PHASE 3D: Validate version consistency
 # ============================================================================
 
 Write-Host "`nValidating version consistency across projects:" -ForegroundColor Yellow
