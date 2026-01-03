@@ -5,17 +5,21 @@ This solution explores attitude/translation control for reaction control systems
 ## NuGet Packages
 
 ### Latest: Unified Package (v2.0.0+)
-As of v2.0.0, all core projects are consolidated into a **single `RCS` NuGet package**:
+As of v2.0.0, all core projects are consolidated into a **single `RCS` NuGet package** supporting .NET Framework 4.7.1 and higher:
 
 ```xml
 <PackageReference Include="RCS" Version="2.0.0" />
 ```
 
+**Supported Frameworks:**
+- .NET Framework 4.7.1
+- .NET Framework 4.7.2
+- .NET Framework 4.8
+
 This single package includes:
 - `LinearSolver` – solver interfaces and utilities
 - `LinearSolver.Custom.GoalProgramming` – goal programming solver implementation
 - `RCS` – core domain types and engine optimizer
-- `RCS.Custom` – custom solver wired optimization
 
 **Breaking Change:** Previous separate packages (`LinearSolver` v1.0.0, `LinearSolver.Custom` v1.0.0) are **no longer published**. See [Migration Guide](#migration-guide) below.
 
