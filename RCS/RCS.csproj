@@ -15,7 +15,7 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>RCS</PackageId>
     <Title>RCS Thruster Optimization</Title>
-    <Version>2.0.0</Version>
+    <Version>4.7.1</Version>
     <Authors>PVS</Authors>
     <Description>Reaction Control System (RCS) thruster optimization library for attitude and translation control with multiple solver implementations.</Description>
     <PackageTags>rcs;thruster;optimization;attitude-control</PackageTags>

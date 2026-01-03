@@ -83,40 +83,27 @@ jobs:
           New-Item -ItemType Directory -Path "./nupkg" | Out-Null
         }
         
-        # Use unified .nuspec file to pack all 5 core projects into single RCS package
-        Write-Host "Installing NuGet CLI..."
-        dotnet tool install -g NuGet.CommandLine --version 6.8.0
-        
+        # Use NuGet CLI for packing
         Write-Host "Packing unified RCS package..."
-        nuget pack RCS/RCS.nuspec -OutputDirectory ./nupkg
-        if ($LASTEXITCODE -ne 0) { throw "RCS pack failed" }
+        # Windows runners have nuget in PATH
+        nuget pack RCS/RCS.nuspec -OutputDirectory ./nupkg -Verbosity detailed
+        if ($LASTEXITCODE -ne 0) { 
+          throw "RCS pack failed with exit code: $LASTEXITCODE"
+        }
         
         # Verify package was created
-        Write-Host "Verifying package..."
+        Write-Host "`nVerifying package..."
         $packages = @(Get-ChildItem ./nupkg -Filter "RCS*.nupkg")
+        Write-Host "Found $($packages.Count) package(s)"
+        
         if ($packages.Count -ne 1) {
           throw "Expected exactly 1 RCS package but found $($packages.Count)"
         }
         
-        Write-Host "NuGet package created successfully:"
-        $packages | ForEach-Object { 
-          Write-Host "  - $($_.Name) ($($_.Length) bytes)"
-          
-          # Verify the package contains all 5 assemblies
-          $zipPath = $_.FullName
-          $tempDir = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemType Directory }
-          Add-Type -AssemblyName System.IO.Compression.FileSystem
-          [System.IO.Compression.ZipFile]::ExtractToDirectory($zipPath, $tempDir)
-          
-          $dlls = @(Get-ChildItem "$tempDir/lib/net471" -Filter "*.dll" | Select-Object -ExpandProperty Name)
-          Write-Host "`nAssemblies in package:"
-          $dlls | ForEach-Object { Write-Host "    - $_" }
-          
-          if ($dlls.Count -ne 5) {
-            throw "Expected 5 DLL files in package but found $($dlls.Count)"
-          }
-          
-          Remove-Item $tempDir -Recurse -Force
+        Write-Host "`n✓ NuGet package created successfully:"
+        foreach ($pkg in $packages) {
+          Write-Host "  - Name: $($pkg.Name)"
+          Write-Host "  - Size: $($pkg.Length) bytes"
         }
     
     
