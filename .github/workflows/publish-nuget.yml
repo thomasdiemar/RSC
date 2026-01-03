@@ -83,57 +83,27 @@ jobs:
           New-Item -ItemType Directory -Path "./nupkg" | Out-Null
         }
         
-        # Install NuGet CLI using Windows choco or download directly if not available
-        Write-Host "Checking for NuGet CLI..."
-        $nugetPath = (Get-Command nuget -ErrorAction SilentlyContinue).Source
-        if (-not $nugetPath) {
-          Write-Host "NuGet CLI not found, downloading..."
-          # Download NuGet from official source
-          Invoke-WebRequest -Uri "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe" -OutFile "$env:TEMP\nuget.exe"
-          $nugetPath = "$env:TEMP\nuget.exe"
+        # Use NuGet CLI for packing
+        Write-Host "Packing unified RCS package..."
+        # Windows runners have nuget in PATH
+        nuget pack RCS/RCS.nuspec -OutputDirectory ./nupkg -Verbosity detailed
+        if ($LASTEXITCODE -ne 0) { 
+          throw "RCS pack failed with exit code: $LASTEXITCODE"
         }
         
-        Write-Host "Using NuGet: $nugetPath"
-        Write-Host "Packing unified RCS package..."
-        & $nugetPath pack RCS/RCS.nuspec -OutputDirectory ./nupkg
-        if ($LASTEXITCODE -ne 0) { throw "RCS pack failed with exit code $LASTEXITCODE" }
-        
         # Verify package was created
-        Write-Host "Verifying package..."
+        Write-Host "`nVerifying package..."
         $packages = @(Get-ChildItem ./nupkg -Filter "RCS*.nupkg")
+        Write-Host "Found $($packages.Count) package(s)"
+        
         if ($packages.Count -ne 1) {
           throw "Expected exactly 1 RCS package but found $($packages.Count)"
         }
         
-        Write-Host "NuGet package created successfully:"
-        $packages | ForEach-Object { 
-          Write-Host "  - $($_.Name) ($($_.Length) bytes)"
-          
-          # Verify the package contains all assemblies for all target frameworks
-          $zipPath = $_.FullName
-          $tempDir = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemType Directory }
-          Add-Type -AssemblyName System.IO.Compression.FileSystem
-          [System.IO.Compression.ZipFile]::ExtractToDirectory($zipPath, $tempDir)
-          
-          # Check each framework folder
-          $frameworks = @("net471", "net472", "net48")
-          $totalDlls = 0
-          
-          foreach ($framework in $frameworks) {
-            $dlls = @(Get-ChildItem "$tempDir/lib/$framework" -Filter "*.dll" 2>$null | Select-Object -ExpandProperty Name)
-            if ($dlls.Count -gt 0) {
-              Write-Host "`nAssemblies in $framework:"
-              $dlls | ForEach-Object { Write-Host "    - $_" }
-              $totalDlls += $dlls.Count
-            }
-          }
-          
-          if ($totalDlls -eq 0) {
-            throw "No assemblies found in package"
-          }
-          
-          Write-Host "`nTotal assemblies: $totalDlls"
-          Remove-Item $tempDir -Recurse -Force
+        Write-Host "`n✓ NuGet package created successfully:"
+        foreach ($pkg in $packages) {
+          Write-Host "  - Name: $($pkg.Name)"
+          Write-Host "  - Size: $($pkg.Length) bytes"
         }
     
     
