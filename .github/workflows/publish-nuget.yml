@@ -47,52 +47,34 @@ jobs:
     
     - name: Update assembly versions from branch name
       run: |
-        # Extract version from branch name (e.g., version1.2.3 -> 1.2.3.0)
+        # Use the enhanced Update-AssemblyVersion.ps1 script which:
+        # - Extracts version from branch name (e.g., version2.0.1 -> 2.0.1.0 for assemblies, 2.0.1 for csproj)
+        # - Updates all AssemblyInfo.cs files with 4-part assembly version
+        # - Updates all 5 core csproj files with 3-part semantic version
+        # - Validates version consistency across all updated files
         $branchName = "${{ github.ref }}" -replace 'refs/heads/', ''
-        $version = $branchName -replace 'version', ''
-        $version = $version -replace '[^0-9.]', ''
-        
-        # Ensure version has 4 parts (major.minor.build.revision)
-        $parts = $version.Split('.')
-        while ($parts.Count -lt 4) {
-          $parts += "0"
-        }
-        $version = $parts[0..3] -join '.'
-        
-        # For NuSpec, use only major.minor.build (without revision)
-        $nuspecVersion = $parts[0..2] -join '.'
-        
-        Write-Host "Branch: $branchName"
-        Write-Host "Assembly Version: $version"
-        Write-Host "NuSpec Version: $nuspecVersion"
-        
-        # Update all AssemblyInfo.cs files
-        Get-ChildItem -Recurse -Filter "AssemblyInfo.cs" | Where-Object { $_.FullName -notmatch '(obj|bin)' } | ForEach-Object {
-          Write-Host "Updating AssemblyInfo: $($_.FullName)"
-          $content = Get-Content $_.FullName -Raw -Encoding UTF8
-          $content = $content -replace '\[assembly: AssemblyVersion\(".*?"\)\]', "[assembly: AssemblyVersion(`"$version`")]"
-          $content = $content -replace '\[assembly: AssemblyFileVersion\(".*?"\)\]', "[assembly: AssemblyFileVersion(`"$version`")]"
-          Set-Content -Path $_.FullName -Value $content -Encoding UTF8
-        }
-        
-        # Update all .nuspec files
-        Get-ChildItem -Recurse -Filter "*.nuspec" | ForEach-Object {
-          Write-Host "Updating NuSpec: $($_.FullName)"
-          $content = Get-Content $_.FullName -Raw -Encoding UTF8
-          $content = $content -replace '<version>.*?</version>', "<version>$nuspecVersion</version>"
-          Set-Content -Path $_.FullName -Value $content -Encoding UTF8
-        }
-        
-        Write-Host "Assembly and NuSpec version update complete!"
+        .\Update-AssemblyVersion.ps1 -BranchName $branchName
     
     - name: Build solution (Release)
       run: |
-        # Build only the core projects needed for packaging
+        # Build all 5 core projects needed for consolidated RCS package
         # Skip projects that depend on MSF (LinearSolver.MSF, RCS.MSF, RCS.Test)
+        Write-Host "Building LinearSolver..."
         dotnet build LinearSolver/LinearSolver.csproj -c Release --no-restore
+        
+        Write-Host "Building LinearSolver.Custom..."
         dotnet build LinearSolver.Custom/LinearSolver.Custom.csproj -c Release --no-restore
+        
+        Write-Host "Building LinearSolver.Custom.GoalProgramming..."
         dotnet build LinearSolver.Custom.GoalProgramming/LinearSolver.Custom.GoalProgramming.csproj -c Release --no-restore
+        
+        Write-Host "Building RCS..."
         dotnet build RCS/RCS.csproj -c Release --no-restore
+        
+        Write-Host "Building RCS.Custom..."
+        dotnet build RCS.Custom/RCS.Custom.csproj -c Release --no-restore
+        
+        Write-Host "All core projects built successfully!"
     
     - name: Run tests
       run: |
@@ -108,34 +90,42 @@ jobs:
           New-Item -ItemType Directory -Path "./nupkg" | Out-Null
         }
         
-        # Use .nuspec files to pack .NET Framework projects with explicit framework targeting
+        # Use unified .nuspec file to pack all 5 core projects into single RCS package
         Write-Host "Installing NuGet CLI..."
         dotnet tool install -g NuGet.CommandLine --version 6.8.0
         
-        Write-Host "Packing LinearSolver..."
-        nuget pack LinearSolver/LinearSolver.nuspec -OutputDirectory ./nupkg
-        if ($LASTEXITCODE -ne 0) { throw "LinearSolver pack failed" }
-        
-        Write-Host "Packing LinearSolver.Custom..."
-        nuget pack LinearSolver.Custom/LinearSolver.Custom.nuspec -OutputDirectory ./nupkg
-        if ($LASTEXITCODE -ne 0) { throw "LinearSolver.Custom pack failed" }
-        
-        # For RCS, we need to skip the packages.config resolution
-        # Use the .nuspec file with proper framework targeting
-        Write-Host "Packing RCS..."
+        Write-Host "Packing unified RCS package..."
         nuget pack RCS/RCS.nuspec -OutputDirectory ./nupkg
         if ($LASTEXITCODE -ne 0) { throw "RCS pack failed" }
         
-        # Verify packages were created
-        Write-Host "Verifying packages..."
-        $packages = @(Get-ChildItem ./nupkg -Filter "*.nupkg")
-        if ($packages.Count -eq 0) {
-          throw "No packages found in ./nupkg directory"
+        # Verify package was created
+        Write-Host "Verifying package..."
+        $packages = @(Get-ChildItem ./nupkg -Filter "RCS*.nupkg")
+        if ($packages.Count -ne 1) {
+          throw "Expected exactly 1 RCS package but found $($packages.Count)"
         }
         
-        Write-Host "NuGet packages created successfully:"
-        $packages | ForEach-Object { Write-Host "  - $($_.Name) ($($_.Length) bytes)" }
-        Write-Host "Total packages: $($packages.Count)"
+        Write-Host "NuGet package created successfully:"
+        $packages | ForEach-Object { 
+          Write-Host "  - $($_.Name) ($($_.Length) bytes)"
+          
+          # Verify the package contains all 5 assemblies
+          $zipPath = $_.FullName
+          $tempDir = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemType Directory }
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          [System.IO.Compression.ZipFile]::ExtractToDirectory($zipPath, $tempDir)
+          
+          $dlls = @(Get-ChildItem "$tempDir/lib/net471" -Filter "*.dll" | Select-Object -ExpandProperty Name)
+          Write-Host "`nAssemblies in package:"
+          $dlls | ForEach-Object { Write-Host "    - $_" }
+          
+          if ($dlls.Count -ne 5) {
+            throw "Expected 5 DLL files in package but found $($dlls.Count)"
+          }
+          
+          Remove-Item $tempDir -Recurse -Force
+        }
+    
     
     - name: Publish to Azure DevOps Feed
       run: |
