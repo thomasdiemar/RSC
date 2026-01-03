@@ -19,7 +19,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RCS\RCS.csproj" />
-    <ProjectReference Include="..\LinearSolver.Custom\LinearSolver.Custom.csproj" />
     <ProjectReference Include="..\LinearSolver.Custom.GoalProgramming\LinearSolver.Custom.GoalProgramming.csproj" />
     <ProjectReference Include="..\LinearSolver\LinearSolver.csproj" />
     <ProjectReference Include="..\RCS.MSF\RCS.MSF.csproj" />

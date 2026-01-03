@@ -1,9 +1,9 @@
 <Solution>
   <Project Path="LinearSolver.Custom.GoalProgramming/LinearSolver.Custom.GoalProgramming.csproj" Id="e0b60be0-0f23-4dc1-9e05-9bfd8ae1354a" />
-  <Project Path="LinearSolver.Custom/LinearSolver.Custom.csproj" Id="4651759e-ab7f-4d22-a6ac-49e5266ed0a9" />
   <Project Path="LinearSolver.MSF/LinearSolver.MSF.csproj" Id="995ac2ce-ae0e-406e-a407-0abb39ef94d7" />
   <Project Path="LinearSolver/LinearSolver.csproj" Id="db10db18-2fa4-486e-9151-b401ab42eb52" />
   <Project Path="RCS.Test/RCS.Test.csproj" />
   <Project Path="RCS/RCS.csproj" Id="43caae72-eca1-4b4b-9ff6-9a64e7d1531e" />
+  <Project Path="RCS.Custom/RCS.Custom.csproj" />
   <Project Path="ThrusterVisualizer/ThrusterVisualizer.csproj" Id="fa2abdac-090b-4c15-8587-3e7523c612dd" />
 </Solution>

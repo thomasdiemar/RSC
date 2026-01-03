@@ -46,10 +46,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\LinearSolver.Custom\LinearSolver.Custom.csproj">
-      <Project>{4651759e-ab7f-4d22-a6ac-49e5266ed0a9}</Project>
-      <Name>LinearSolver.Custom</Name>
-    </ProjectReference>
     <ProjectReference Include="..\LinearSolver\LinearSolver.csproj">
       <Project>{db10db18-2fa4-486e-9151-b401ab42eb52}</Project>
       <Name>LinearSolver</Name>
