@@ -21,8 +21,5 @@
     <!-- RCS assemblies -->
     <file src="bin\Release\RCS.dll" target="lib\net471\RCS.dll" />
     <file src="bin\Release\RCS.pdb" target="lib\net471\RCS.pdb" />
-    <!-- RCS.Custom assemblies -->
-    <file src="..\RCS.Custom\bin\Release\RCS.Custom.dll" target="lib\net471\RCS.Custom.dll" />
-    <file src="..\RCS.Custom\bin\Release\RCS.Custom.pdb" target="lib\net471\RCS.Custom.pdb" />
   </files>
 </package>
