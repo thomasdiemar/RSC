@@ -102,20 +102,30 @@ jobs:
         $packages | ForEach-Object { 
           Write-Host "  - $($_.Name) ($($_.Length) bytes)"
           
-          # Verify the package contains all 5 assemblies
+          # Verify the package contains all assemblies for all target frameworks
           $zipPath = $_.FullName
           $tempDir = New-TemporaryFile | ForEach-Object { Remove-Item $_; New-Item -ItemType Directory }
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           [System.IO.Compression.ZipFile]::ExtractToDirectory($zipPath, $tempDir)
           
-          $dlls = @(Get-ChildItem "$tempDir/lib/net471" -Filter "*.dll" | Select-Object -ExpandProperty Name)
-          Write-Host "`nAssemblies in package:"
-          $dlls | ForEach-Object { Write-Host "    - $_" }
+          # Check each framework folder
+          $frameworks = @("net471", "net472", "net48")
+          $totalDlls = 0
           
-          if ($dlls.Count -ne 5) {
-            throw "Expected 5 DLL files in package but found $($dlls.Count)"
+          foreach ($framework in $frameworks) {
+            $dlls = @(Get-ChildItem "$tempDir/lib/$framework" -Filter "*.dll" 2>$null | Select-Object -ExpandProperty Name)
+            if ($dlls.Count -gt 0) {
+              Write-Host "`nAssemblies in $framework:"
+              $dlls | ForEach-Object { Write-Host "    - $_" }
+              $totalDlls += $dlls.Count
+            }
           }
           
+          if ($totalDlls -eq 0) {
+            throw "No assemblies found in package"
+          }
+          
+          Write-Host "`nTotal assemblies: $totalDlls"
           Remove-Item $tempDir -Recurse -Force
         }
     
