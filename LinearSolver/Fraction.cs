@@ -11,7 +11,7 @@ using System;
 
 namespace LinearSolver
 {
-	public struct Fraction
+	public struct Fraction : IConvertible
 	{
 		long num;
 		long den;
@@ -30,6 +30,14 @@ namespace LinearSolver
 		}
 
 		public Fraction(Fraction f) : this(f.num, f.den)
+		{
+		}
+
+		public Fraction(float f) : this((decimal)f, 1)
+		{
+		}
+
+		public Fraction(double d) : this((decimal)d, 1)
 		{
 		}
 
@@ -123,7 +131,7 @@ namespace LinearSolver
 				decimal r2 = (decimal)a.den * b.den;
 				return new Fraction(r1, r2);
 			}
-			catch (OverflowException)
+			catch (Exception)
 			{
 				// Fall back to double precision if decimal overflows
 				double aVal = (double)a.num / (double)a.den;
@@ -308,15 +316,21 @@ namespace LinearSolver
 			return f;
 		}
 
-		// Euclid identities
+        public static implicit operator Fraction(Single b)
+        {
+            var f = new Fraction(b);
+            return f;
+        }
 
-		// GCD(A,B)=GCD(B,A) 
-		// GCD(A,B)=GCD(-A,B) 
-		// GCD(A,0)=ABS(A) 
-		// GCD(0,0)=0
-		// GCD(A,B)=GCD(B,A%B)
+        // Euclid identities
 
-		public static decimal GCD(decimal a, decimal b)
+        // GCD(A,B)=GCD(B,A) 
+        // GCD(A,B)=GCD(-A,B) 
+        // GCD(A,0)=ABS(A) 
+        // GCD(0,0)=0
+        // GCD(A,B)=GCD(B,A%B)
+
+        public static decimal GCD(decimal a, decimal b)
 		{
 			if (b == 0)
 				return a;
@@ -398,6 +412,116 @@ namespace LinearSolver
         public static Fraction Epsilon = new Fraction(1, 100000000);
 
 		public static readonly Fraction NaN = new Fraction{ num = 0, den = 0};
+
+        #region IConvertible Implementation
+
+        public TypeCode GetTypeCode()
+        {
+            return TypeCode.Object;
+        }
+
+        public bool ToBoolean(IFormatProvider provider)
+        {
+            return num != 0;
+        }
+
+        public byte ToByte(IFormatProvider provider)
+        {
+            return Convert.ToByte((double)this);
+        }
+
+        public char ToChar(IFormatProvider provider)
+        {
+            throw new Exception("Cannot convert Fraction to char");
+        }
+
+        public DateTime ToDateTime(IFormatProvider provider)
+        {
+            throw new Exception("Cannot convert Fraction to DateTime");
+        }
+
+        public decimal ToDecimal(IFormatProvider provider)
+        {
+            return (decimal)num / (decimal)den;
+        }
+
+        public double ToDouble(IFormatProvider provider)
+        {
+            return (double)num / (double)den;
+        }
+
+        public short ToInt16(IFormatProvider provider)
+        {
+            return Convert.ToInt16((double)this);
+        }
+
+        public int ToInt32(IFormatProvider provider)
+        {
+            return Convert.ToInt32((double)this);
+        }
+
+        public long ToInt64(IFormatProvider provider)
+        {
+            return Convert.ToInt64((double)this);
+        }
+
+        public sbyte ToSByte(IFormatProvider provider)
+        {
+            return Convert.ToSByte((double)this);
+        }
+
+        public float ToSingle(IFormatProvider provider)
+        {
+            return (float)num / (float)den;
+        }
+
+        public string ToString(IFormatProvider provider)
+        {
+            return ToString();
+        }
+
+        public object ToType(Type conversionType, IFormatProvider provider)
+        {
+            if (conversionType == typeof(Fraction))
+                return this;
+            if (conversionType == typeof(double))
+                return ToDouble(provider);
+            if (conversionType == typeof(float))
+                return ToSingle(provider);
+            if (conversionType == typeof(decimal))
+                return ToDecimal(provider);
+            if (conversionType == typeof(int))
+                return ToInt32(provider);
+            if (conversionType == typeof(long))
+                return ToInt64(provider);
+            if (conversionType == typeof(short))
+                return ToInt16(provider);
+            if (conversionType == typeof(byte))
+                return ToByte(provider);
+            if (conversionType == typeof(bool))
+                return ToBoolean(provider);
+            if (conversionType == typeof(string))
+                return ToString(provider);
+
+            throw new Exception($"Cannot convert Fraction to {conversionType.Name}");
+        }
+
+        public ushort ToUInt16(IFormatProvider provider)
+        {
+            return Convert.ToUInt16((double)this);
+        }
+
+        public uint ToUInt32(IFormatProvider provider)
+        {
+            return Convert.ToUInt32((double)this);
+        }
+
+        public ulong ToUInt64(IFormatProvider provider)
+        {
+            return Convert.ToUInt64((double)this);
+        }
+
+        #endregion
 
         #endregion
 

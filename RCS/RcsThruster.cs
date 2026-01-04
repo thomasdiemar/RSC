@@ -1,3 +1,5 @@
+using LinearSolver;
+
 namespace RCS
 {
     public class RcsThruster
@@ -10,5 +12,7 @@ namespace RCS
             Direction = direction;
             Position = position;
         }
+
     }
+
 }
