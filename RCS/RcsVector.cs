@@ -12,6 +12,20 @@ namespace RCS
             Y = y;
             Z = z;
         }
+
+        public RcsVector(float x, float y, float z)
+        {
+            X = (T)System.Convert.ChangeType(x, typeof(T));
+            Y = (T)System.Convert.ChangeType(y, typeof(T));
+            Z = (T)System.Convert.ChangeType(z, typeof(T));
+        }
+
+        public RcsVector(double x, double y, double z) 
+        { 
+            X = (T)System.Convert.ChangeType(x, typeof(T));
+            Y = (T)System.Convert.ChangeType(y, typeof(T));
+            Z = (T)System.Convert.ChangeType(z, typeof(T));
+        }
        
     }
 }
