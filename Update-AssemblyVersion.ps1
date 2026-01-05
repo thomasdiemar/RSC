@@ -1,11 +1,14 @@
 # Script to update AssemblyVersion, AssemblyFileVersion, and csproj <Version> from branch name
-# Usage: .\Update-AssemblyVersion.ps1 -BranchName "version1.2.3"
+# Usage: .\Update-AssemblyVersion.ps1 -BranchName "version1.2"
 # Or: .\Update-AssemblyVersion.ps1 (will use current git branch)
 #
 # This script updates:
 # 1. AssemblyVersion and AssemblyFileVersion in AssemblyInfo.cs files (4-part version)
 # 2. <Version> property in all 5 core project csproj files (3-part version)
 # 3. Validates version consistency across all updated files
+#
+# Patch version is automatically calculated from total commit count:
+# Branch version1.2 at commit 1234 becomes: 1.2.1234.0 (AssemblyVersion) and 1.2.1234 (csproj)
 
 param(
     [string]$BranchName,
@@ -20,19 +23,35 @@ if (-not $BranchName) {
 Write-Host "=== Assembly Version Updater ===" -ForegroundColor Cyan
 Write-Host "Branch: $BranchName" -ForegroundColor Cyan
 
-# Extract version from branch name (e.g., version1.2.3 -> 1.2.3.0)
-$version = $BranchName -replace 'version', ''
-$version = $version -replace '[^0-9.]', ''
-
-# Ensure version has 4 parts (major.minor.build.revision)
-$parts = $version.Split('.')
-while ($parts.Count -lt 4) {
-    $parts += "0"
+# Get total commit count
+$commitCount = git rev-list --count HEAD
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Error: Could not get commit count from git" -ForegroundColor Red
+    exit 1
 }
-$assemblyVersion = $parts[0..3] -join '.'
+Write-Host "Total Commit Count: $commitCount" -ForegroundColor Cyan
+
+# Extract version from branch name (e.g., version1.2 -> 1.2)
+$baseVersion = $BranchName -replace 'version', ''
+$baseVersion = $baseVersion -replace '[^0-9.]', ''
+
+# Split into parts
+$parts = $baseVersion.Split('.')
+if ($parts.Count -lt 2) {
+    Write-Host "Error: Branch name must contain major.minor version (e.g., version1.2)" -ForegroundColor Red
+    exit 1
+}
+
+# Build version with commit count as patch
+$major = $parts[0]
+$minor = $parts[1]
+$patch = $commitCount
+
+# Ensure version has 4 parts (major.minor.patch.revision)
+$assemblyVersion = "$major.$minor.$patch.0"
 
 # For csproj, use 3-part version (major.minor.patch)
-$csprojVersion = $parts[0..2] -join '.'
+$csprojVersion = "$major.$minor.$patch"
 
 Write-Host "Extracted AssemblyVersion (4-part): $assemblyVersion" -ForegroundColor Green
 Write-Host "Extracted csproj Version (3-part): $csprojVersion" -ForegroundColor Green
