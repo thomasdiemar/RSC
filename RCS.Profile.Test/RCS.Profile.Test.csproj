@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <NoWarn>$(NoWarn);NU1900</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MSTest" Version="4.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RCS\RCS.csproj" />
+    <ProjectReference Include="..\RCS.Profile\RCS.Profile.csproj" />
+    <ProjectReference Include="..\LinearSolver.Custom.GoalProgramming\LinearSolver.Custom.GoalProgramming.csproj" />
+    <ProjectReference Include="..\LinearSolver\LinearSolver.csproj" />
+  </ItemGroup>
+
+</Project>
