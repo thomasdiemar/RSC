@@ -6,8 +6,8 @@
     <authors>Diemar Consulting</authors>
     <license type="expression">MIT</license>
     <projectUrl>https://github.com/thomasdiemar/RSC</projectUrl>
-    <description>Reaction Control System (RCS) engine optimizer with integrated linear solver implementations.</description>
-    <tags>reaction-control;optimization;engine;solver</tags>
+    <description>Reaction Control System (RCS) engine optimizer with integrated linear solver implementations and profiling capabilities.</description>
+    <tags>reaction-control;optimization;engine;solver;profiling;thruster</tags>
     <dependencies>
     </dependencies>
   </metadata>
@@ -19,18 +19,24 @@
     <file src="..\LinearSolver.Custom.GoalProgramming\bin\Release\LinearSolver.Custom.GoalProgramming.pdb" target="lib\net471\LinearSolver.Custom.GoalProgramming.pdb" />
     <file src="bin\Release\RCS.dll" target="lib\net471\RCS.dll" />
     <file src="bin\Release\RCS.pdb" target="lib\net471\RCS.pdb" />
+    <file src="..\RCS.Profile\bin\Release\RCS.Profile.dll" target="lib\net471\RCS.Profile.dll" />
+    <file src="..\RCS.Profile\bin\Release\RCS.Profile.pdb" target="lib\net471\RCS.Profile.pdb" />
     <!-- .NET Framework 4.7.2 (forward-compatible) -->
     <file src="..\LinearSolver\bin\Release\LinearSolver.dll" target="lib\net472\LinearSolver.dll" />
     <file src="..\LinearSolver\bin\Release\LinearSolver.pdb" target="lib\net472\LinearSolver.pdb" />
     <file src="..\LinearSolver.Custom.GoalProgramming\bin\Release\LinearSolver.Custom.GoalProgramming.dll" target="lib\net472\LinearSolver.Custom.GoalProgramming.dll" />
-    <file src="..\LinearSolver.Custom.GoalProgramming\bin\Release\LinearSolver.Custom.GoalProgramming.pdb" target="lib\net472\LinearSolver.Custom.GoalProgramming.pdb" />
+    <file src="..\LinearSolver.Custom.GoalProgramming\bin\Release\
+    <file src="..\RCS.Profile\bin\Release\RCS.Profile.dll" target="lib\net472\RCS.Profile.dll" />
+    <file src="..\RCS.Profile\bin\Release\RCS.Profile.pdb" target="lib\net472\RCS.Profile.pdb" />LinearSolver.Custom.GoalProgramming.pdb" target="lib\net472\LinearSolver.Custom.GoalProgramming.pdb" />
     <file src="bin\Release\RCS.dll" target="lib\net472\RCS.dll" />
     <file src="bin\Release\RCS.pdb" target="lib\net472\RCS.pdb" />
     <!-- .NET Framework 4.8 (forward-compatible) -->
     <file src="..\LinearSolver\bin\Release\LinearSolver.dll" target="lib\net48\LinearSolver.dll" />
     <file src="..\LinearSolver\bin\Release\LinearSolver.pdb" target="lib\net48\LinearSolver.pdb" />
     <file src="..\LinearSolver.Custom.GoalProgramming\bin\Release\LinearSolver.Custom.GoalProgramming.dll" target="lib\net48\LinearSolver.Custom.GoalProgramming.dll" />
-    <file src="..\LinearSolver.Custom.GoalProgramming\bin\Release\LinearSolver.Custom.GoalProgramming.pdb" target="lib\net48\LinearSolver.Custom.GoalProgramming.pdb" />
+    <file src="..\LinearSolver.Custom.GoalProgramming\bin\Release
+    <file src="..\RCS.Profile\bin\Release\RCS.Profile.dll" target="lib\net48\RCS.Profile.dll" />
+    <file src="..\RCS.Profile\bin\Release\RCS.Profile.pdb" target="lib\net48\RCS.Profile.pdb" />\LinearSolver.Custom.GoalProgramming.pdb" target="lib\net48\LinearSolver.Custom.GoalProgramming.pdb" />
     <file src="bin\Release\RCS.dll" target="lib\net48\RCS.dll" />
     <file src="bin\Release\RCS.pdb" target="lib\net48\RCS.pdb" />
   </files>

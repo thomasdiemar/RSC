@@ -16,7 +16,7 @@
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <PackageId>RCS</PackageId>
     <Title>Linear Solver Base</Title>
-    <Version>4.7.1</Version>
+    <Version>4.8.122</Version>
     <Authors>PVS</Authors>
     <Description>Base interfaces and utilities for linear solver implementations using exact rational arithmetic with Fraction types.</Description>
     <PackageTags>linear-solver;fraction;optimization</PackageTags>

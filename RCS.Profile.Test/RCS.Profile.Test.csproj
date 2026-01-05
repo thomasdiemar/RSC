@@ -19,6 +19,7 @@
   <ItemGroup>
     <ProjectReference Include="..\RCS\RCS.csproj" />
     <ProjectReference Include="..\RCS.Profile\RCS.Profile.csproj" />
+    <ProjectReference Include="..\RCS.Test\RCS.Test.csproj" />
     <ProjectReference Include="..\LinearSolver.Custom.GoalProgramming\LinearSolver.Custom.GoalProgramming.csproj" />
     <ProjectReference Include="..\LinearSolver\LinearSolver.csproj" />
   </ItemGroup>

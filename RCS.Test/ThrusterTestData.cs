@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace ThrusterOptimizationTests
 {
-    internal static class ThrusterTestData
+    public static class ThrusterTestData
     {
         public static Dictionary<string, RcsThruster> CreateThrusters()
         {
