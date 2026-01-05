@@ -5,24 +5,24 @@ namespace RCS.Profile
 {
     public class RcsEngineProfile
     {
-        private Dictionary<RcsProfileCommand, IReadOnlyDictionary<string, Fraction>> ThrusterOutputs = 
-     new Dictionary<RcsProfileCommand, IReadOnlyDictionary<string, Fraction>>();
+        private Dictionary<RcsProfileCommand, IReadOnlyDictionary<string, Fraction>> ThrusterOutputs =
+            new Dictionary<RcsProfileCommand, IReadOnlyDictionary<string, Fraction>>();
 
         public void AddProfileCommand(RcsProfileCommand command, IReadOnlyDictionary<string, Fraction> outputs)
         {
             if (ThrusterOutputs.ContainsKey(command))
-          {
- ThrusterOutputs[command] = outputs;
-        }
-    else
             {
- ThrusterOutputs.Add(command, outputs);
-         }
+                ThrusterOutputs[command] = outputs;
+            }
+            else
+            {
+                ThrusterOutputs.Add(command, outputs);
+            }
         }
 
- public IReadOnlyDictionary<string, Fraction> GetProfileCommand(RcsProfileCommand command)
+        public IReadOnlyDictionary<string, Fraction> GetProfileCommand(RcsProfileCommand command)
         {
-return ThrusterOutputs.ContainsKey(command) ? ThrusterOutputs[command] : null;
-      }
+            return ThrusterOutputs.ContainsKey(command) ? ThrusterOutputs[command] : null;
+        }
     }
 }
