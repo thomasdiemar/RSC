@@ -98,7 +98,7 @@ namespace ThrusterOptimizationTests
         [TestMethod] public void RandomFx_Thrusters_MaxTz_MatchesMsf() => AssertOptimisersMatchRandomFx(new RcsVector<Fraction>(), new RcsVector<Fraction>(0, 0, 1));
         [TestMethod] public void RandomFx_Thrusters_MinTz_MatchesMsf() => AssertOptimisersMatchRandomFx(new RcsVector<Fraction>(), new RcsVector<Fraction>(0, 0, -1));
 
-        private void AssertOptimisersMatch(RcsVector<Fraction> desiredForce, RcsVector<Fraction> desiredTorque)
+        private void AssertOptimisersMatch(RcsVector<float> desiredForce, RcsVector<float> desiredTorque)
         {
             var engine = new RcsEngine(ThrusterTestData.CreateThrusters());
             var command = new RcsCommand(desiredForce, desiredTorque, allowNonCommandedForces: true);
@@ -118,7 +118,7 @@ namespace ThrusterOptimizationTests
             Assert.AreEqual(msfResult.ResultantTorque.Z, customResult.ResultantTorque.Z, tolerance, "Tz mismatch");
         }
 
-        private void AssertOptimisersMatch3Fx(RcsVector<Fraction> desiredForce, RcsVector<Fraction> desiredTorque)
+        private void AssertOptimisersMatch3Fx(RcsVector<float> desiredForce, RcsVector<float> desiredTorque)
         {
             var engine = new RcsEngine(ThrusterTestData.CreateThrusters3Fx());
             var command = new RcsCommand(desiredForce, desiredTorque);
@@ -144,7 +144,7 @@ namespace ThrusterOptimizationTests
             Assert.AreEqual(msfResult.ResultantTorque.Z, customResult.ResultantTorque.Z, tolerance, "Tz mismatch");
         }
 
-        private void AssertOptimisersMatch3Opp(RcsVector<Fraction> desiredForce, RcsVector<Fraction> desiredTorque)
+        private void AssertOptimisersMatch3Opp(RcsVector<float> desiredForce, RcsVector<float> desiredTorque)
         {
             var engine = new RcsEngine(ThrusterTestData.CreateThrusters3opposite());
             var command = new RcsCommand(desiredForce, desiredTorque);
@@ -170,7 +170,7 @@ namespace ThrusterOptimizationTests
             Assert.AreEqual(msfResult.ResultantTorque.Z, customResult.ResultantTorque.Z, tolerance, "Tz mismatch");
         }
 
-        private void AssertOptimisersMatch4Fx(RcsVector<Fraction> desiredForce, RcsVector<Fraction> desiredTorque)
+        private void AssertOptimisersMatch4Fx(RcsVector<float> desiredForce, RcsVector<float> desiredTorque)
         {
             var engine = new RcsEngine(ThrusterTestData.CreateThrusters4Fx());
             var command = new RcsCommand(desiredForce, desiredTorque, allowNonCommandedForces: true, allowNonCommandedTorques: true);
@@ -196,7 +196,7 @@ namespace ThrusterOptimizationTests
             Assert.AreEqual(msfResult.ResultantTorque.Z, customResult.ResultantTorque.Z, tolerance, "Tz mismatch");
         }
 
-        private void AssertOptimisersMatchRandom2Fx(RcsVector<Fraction> desiredForce, RcsVector<Fraction> desiredTorque)
+        private void AssertOptimisersMatchRandom2Fx(RcsVector<float> desiredForce, RcsVector<float> desiredTorque)
         {
             var engine = new RcsEngine(ThrusterTestData.CreateThrustersRandom2Fx());
             var command = new RcsCommand(desiredForce, desiredTorque, allowNonCommandedForces: true, allowNonCommandedTorques: true);
@@ -220,7 +220,7 @@ namespace ThrusterOptimizationTests
             Assert.AreEqual(msfResult.ResultantTorque.Z, customResult.ResultantTorque.Z, tolerance, "Tz mismatch");
         }
 
-        private void AssertOptimisersMatchRandomFx(RcsVector<Fraction> desiredForce, RcsVector<Fraction> desiredTorque)
+        private void AssertOptimisersMatchRandomFx(RcsVector<float> desiredForce, RcsVector<float> desiredTorque)
         {
             var engine = new RcsEngine(ThrusterTestData.CreateThrustersRandomFx());
             var command = new RcsCommand(desiredForce, desiredTorque, allowNonCommandedForces: true, allowNonCommandedTorques: true);

@@ -29,9 +29,10 @@ namespace RCS
         /// </summary>
         public IEnumerable<MyProgress<RcsEngineResult>> Optimise(RcsEngine engine, RcsCommand command)
         {
+            var optimiserCommand = (RcsEngineOptimiserCommand)command;
             var orderedThrusters = engine.Thrusters.OrderBy(t => t.Key).ToList();
             var matrix = BuildCoefficientMatrix(orderedThrusters);
-            var desired = BuildDesiredVector(engine, command);
+            var desired = BuildDesiredVector(engine, optimiserCommand);
 
             foreach (var progress in solver.Solve(matrix, desired))
             {
@@ -45,7 +46,7 @@ namespace RCS
         /// <summary>
         /// Construct desired per-axis targets (max/min or soft zero) based on command and thruster limits.
         /// </summary>
-        public Fraction[] BuildDesiredVector(RcsEngine engine, RcsCommand command)
+        Fraction[] BuildDesiredVector(RcsEngine engine, RcsEngineOptimiserCommand command)
         {
             Fraction maxFx = 0, minFx = 0, maxFy = 0, minFy = 0, maxFz = 0, minFz = 0;
             Fraction maxTx = 0, minTx = 0, maxTy = 0, minTy = 0, maxTz = 0, minTz = 0;
@@ -82,7 +83,7 @@ namespace RCS
         /// <summary>
         /// Build the 6xN coefficient matrix (force/torque rows by thruster).
         /// </summary>
-        private static Fraction[,] BuildCoefficientMatrix(IReadOnlyList<KeyValuePair<string, RcsThruster>> thrusters)
+        static Fraction[,] BuildCoefficientMatrix(IReadOnlyList<KeyValuePair<string, RcsThruster>> thrusters)
         {
             var matrix = new Fraction[6, thrusters.Count];
 
@@ -106,7 +107,7 @@ namespace RCS
         /// <summary>
         /// Select target per axis based on requested sign and soft-zero allowance.
         /// </summary>
-        private static Fraction SelectDesired(Fraction max, Fraction min, Fraction requested, bool allowSoftZero)
+        static Fraction SelectDesired(Fraction max, Fraction min, Fraction requested, bool allowSoftZero)
         {
             if (requested > 0)
                 return max;
@@ -118,24 +119,24 @@ namespace RCS
         /// <summary>
         /// Map solver output vector back to thruster name/value pairs.
         /// </summary>
-        private static Dictionary<string, Fraction> MapOutputs(
+        static Dictionary<string, float> MapOutputs(
             IReadOnlyList<KeyValuePair<string, RcsThruster>> orderedThrusters,
             Fraction[] outputsArray)
         {
-            var outputs = new Dictionary<string, Fraction>();
+            var outputs = new Dictionary<string, float>();
             for (int i = 0; i < orderedThrusters.Count; i++)
-                outputs[orderedThrusters[i].Key] = outputsArray[i];
+                outputs[orderedThrusters[i].Key] = outputsArray[i].ToFloat();
             return outputs;
         }
 
         /// <summary>
         /// Compute resultant force from thruster outputs.
         /// </summary>
-        private static RcsVector<Fraction> CalculateResultantForce(
+        static RcsVector<float> CalculateResultantForce(
             IReadOnlyDictionary<string, RcsThruster> thrusters,
-            IReadOnlyDictionary<string, Fraction> outputs)
+            IReadOnlyDictionary<string, float> outputs)
         {
-            Fraction fx = 0, fy = 0, fz = 0;
+            float fx = 0, fy = 0, fz = 0;
 
             foreach (var kvp in thrusters)
             {
@@ -147,17 +148,17 @@ namespace RCS
                 fz += thrust * dir.Z;
             }
 
-            return new RcsVector<Fraction>(fx, fy, fz);
+            return new RcsVector<float>(fx, fy, fz);
         }
 
         /// <summary>
         /// Compute resultant torque from thruster outputs.
         /// </summary>
-        private static RcsVector<Fraction> CalculateResultantTorque(
+        static RcsVector<float> CalculateResultantTorque(
             IReadOnlyDictionary<string, RcsThruster> thrusters,
-            IReadOnlyDictionary<string, Fraction> outputs)
+            IReadOnlyDictionary<string, float> outputs)
         {
-            Fraction tx = 0, ty = 0, tz = 0;
+            float tx = 0, ty = 0, tz = 0;
 
             foreach (var kvp in thrusters)
             {
@@ -171,13 +172,13 @@ namespace RCS
                 tz += pos.X * thrust * dir.Y - pos.Y * thrust * dir.X;
             }
 
-            return new RcsVector<Fraction>(tx, ty, tz);
+            return new RcsVector<float>(tx, ty, tz);
         }
 
         /// <summary>
-        /// Wrap a snapshot result into progress metadata.
+ /// Wrap a snapshot result into progress metadata.
         /// </summary>
-        private static MyProgress<RcsEngineResult> CreateProgress(RcsEngineResult result)
+        static MyProgress<RcsEngineResult> CreateProgress(RcsEngineResult result)
         {
             return new MyProgress<RcsEngineResult>
             {

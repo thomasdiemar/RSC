@@ -1,3 +1,4 @@
+using LinearSolver;
 using LinearSolver.Custom.GoalProgramming.PreEmptive.BoundedInteger.Simplex;
 using RCS.Profile;
 using ThrusterOptimizationTests;
@@ -122,5 +123,7 @@ namespace RCS.Profile.Test
 
             TestContext.WriteLine($"Unity Thrusters: Completed with {profileResults.Count} progress steps");
         }
+
+    
     }
 }

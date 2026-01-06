@@ -5,12 +5,13 @@ namespace RCS.Profile
 {
     public struct RcsProfileCommand
     {
-        public RcsVector<Fraction> DesiredForce { get; set; }
-        public RcsVector<Fraction> DesiredTorque { get; set; }
+        public static readonly RcsVector<float> NOCOMMAND = new RcsVector<float>(0, 0, 0);
+        public RcsVector<float> DesiredForce { get; set; }
+        public RcsVector<float> DesiredTorque { get; set; }
 
         public RcsProfileCommand(
-            RcsVector<Fraction> desiredForce,
-            RcsVector<Fraction> desiredTorque)
+            RcsVector<float> desiredForce,
+            RcsVector<float> desiredTorque)
         {
             DesiredForce = desiredForce;
             DesiredTorque = desiredTorque;
