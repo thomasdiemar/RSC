@@ -123,7 +123,7 @@ namespace LinearSolver
 				decimal r2 = (decimal)a.den * b.den;
 				return new Fraction(r1, r2);
 			}
-			catch (OverflowException)
+			catch (Exception)
 			{
 				// Fall back to double precision if decimal overflows
 				double aVal = (double)a.num / (double)a.den;

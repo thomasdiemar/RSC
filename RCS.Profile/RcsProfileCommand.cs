@@ -5,6 +5,7 @@ namespace RCS.Profile
 {
     public struct RcsProfileCommand
     {
+        public static readonly RcsVector<Fraction> NOCOMMAND = new RcsVector<Fraction>(0, 0, 0);
         public RcsVector<Fraction> DesiredForce { get; set; }
         public RcsVector<Fraction> DesiredTorque { get; set; }
 

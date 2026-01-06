@@ -38,7 +38,7 @@
     <ProjectReference Include="..\LinearSolver\LinearSolver.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="RcsEngineProfile.cs" />
+    <Compile Include="RcsStaticEngineProfile.cs" />
     <Compile Include="RcsProfileCommand.cs" />
     <Compile Include="RcsStaticEngineProfiler.cs" />
   </ItemGroup>
