@@ -5,6 +5,6 @@ namespace RCS
 {
     public interface IRcsEngineOptimiser
     {
-        IEnumerable<MyProgress<RcsEngineResult>> Optimise(RcsEngine engine, RcsEngineOptimiserCommand command);
+        IEnumerable<MyProgress<RcsEngineResult>> Optimise(RcsEngine engine, RcsCommand command);
     }
 }

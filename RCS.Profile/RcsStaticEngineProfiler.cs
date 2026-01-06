@@ -16,21 +16,21 @@ namespace RCS.Profile
         {
             var profile = new RcsStaticEngineProfile();
 
-            var commands = new RcsEngineOptimiserCommand[]
+            var commands = new RcsCommand[]
             {
-                new RcsEngineOptimiserCommand(new RcsVector<Fraction>(1, 0, 0), RcsProfileCommand.NOCOMMAND),
-                new RcsEngineOptimiserCommand(new RcsVector<Fraction>(1, 0, 0), RcsProfileCommand.NOCOMMAND),
-                new RcsEngineOptimiserCommand(new RcsVector<Fraction>(-1, 0, 0), RcsProfileCommand.NOCOMMAND),
-                new RcsEngineOptimiserCommand(new RcsVector<Fraction>(0, 1, 0), RcsProfileCommand.NOCOMMAND),
-                new RcsEngineOptimiserCommand(new RcsVector<Fraction>(0, -1, 0), RcsProfileCommand.NOCOMMAND),
-                new RcsEngineOptimiserCommand(new RcsVector<Fraction>(0, 0, 1), RcsProfileCommand.NOCOMMAND),
-                new RcsEngineOptimiserCommand(new RcsVector<Fraction>(0, 0, -1), RcsProfileCommand.NOCOMMAND),
-                new RcsEngineOptimiserCommand(RcsProfileCommand.NOCOMMAND, new RcsVector<Fraction>(1, 0, 0)),
-                new RcsEngineOptimiserCommand(RcsProfileCommand.NOCOMMAND, new RcsVector<Fraction>(-1, 0, 0)),
-                new RcsEngineOptimiserCommand(RcsProfileCommand.NOCOMMAND, new RcsVector<Fraction>(0, 1, 0)),
-                new RcsEngineOptimiserCommand(RcsProfileCommand.NOCOMMAND, new RcsVector<Fraction>(0, -1, 0)),
-                new RcsEngineOptimiserCommand(RcsProfileCommand.NOCOMMAND, new RcsVector<Fraction>(0, 0, 1)),
-                new RcsEngineOptimiserCommand(RcsProfileCommand.NOCOMMAND, new RcsVector<Fraction>(0, 0, -1))
+                new RcsCommand(new RcsVector<float>(1, 0, 0), RcsProfileCommand.NOCOMMAND),
+                new RcsCommand(new RcsVector<float>(1, 0, 0), RcsProfileCommand.NOCOMMAND),
+                new RcsCommand(new RcsVector<float>(-1, 0, 0), RcsProfileCommand.NOCOMMAND),
+                new RcsCommand(new RcsVector<float>(0, 1, 0), RcsProfileCommand.NOCOMMAND),
+                new RcsCommand(new RcsVector<float>(0, -1, 0), RcsProfileCommand.NOCOMMAND),
+                new RcsCommand(new RcsVector<float>(0, 0, 1), RcsProfileCommand.NOCOMMAND),
+                new RcsCommand(new RcsVector<float>(0, 0, -1), RcsProfileCommand.NOCOMMAND),
+                new RcsCommand(RcsProfileCommand.NOCOMMAND, new RcsVector<float>(1, 0, 0)),
+                new RcsCommand(RcsProfileCommand.NOCOMMAND, new RcsVector<float>(-1, 0, 0)),
+                new RcsCommand(RcsProfileCommand.NOCOMMAND, new RcsVector<float>(0, 1, 0)),
+                new RcsCommand(RcsProfileCommand.NOCOMMAND, new RcsVector<float>(0, -1, 0)),
+                new RcsCommand(RcsProfileCommand.NOCOMMAND, new RcsVector<float>(0, 0, 1)),
+                new RcsCommand(RcsProfileCommand.NOCOMMAND, new RcsVector<float>(0, 0, -1))
             };
 
             foreach (var command in commands)
@@ -49,7 +49,7 @@ namespace RCS.Profile
             };
         }
 
-        private IEnumerable<MyProgress<RcsStaticEngineProfile>> ProfileCommand(RcsEngine rcsEngine, RcsEngineOptimiserCommand command, RcsStaticEngineProfile profile)
+        private IEnumerable<MyProgress<RcsStaticEngineProfile>> ProfileCommand(RcsEngine rcsEngine, RcsCommand command, RcsStaticEngineProfile profile)
         {
             var success = false;
             foreach (var result in ProfileCommandOptimise(rcsEngine, command, profile))
@@ -69,7 +69,7 @@ namespace RCS.Profile
             }
         }
 
-        private IEnumerable<MyProgress<RcsStaticEngineProfile>> ProfileCommandOptimise(RcsEngine rcsEngine, RcsEngineOptimiserCommand rcsCommand, RcsStaticEngineProfile profile)
+        private IEnumerable<MyProgress<RcsStaticEngineProfile>> ProfileCommandOptimise(RcsEngine rcsEngine, RcsCommand rcsCommand, RcsStaticEngineProfile profile)
         {
             foreach (var result in Optimiser.Optimise(rcsEngine, rcsCommand))
             {

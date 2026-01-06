@@ -6,14 +6,14 @@ namespace RCS
 {
     public class RcsEngineResult
     {
-        public IReadOnlyDictionary<string, Fraction> ThrusterOutputs { get; }
-        public RcsVector<Fraction> ResultantForce { get; }
-        public RcsVector<Fraction> ResultantTorque { get; }
+        public IReadOnlyDictionary<string, float> ThrusterOutputs { get; }
+        public RcsVector<float> ResultantForce { get; }
+        public RcsVector<float> ResultantTorque { get; }
 
         public RcsEngineResult(
-            IReadOnlyDictionary<string, Fraction> thrusterOutputs,
-            RcsVector<Fraction> resultantForce,
-            RcsVector<Fraction> resultantTorque)
+            IReadOnlyDictionary<string, float> thrusterOutputs,
+            RcsVector<float> resultantForce,
+            RcsVector<float> resultantTorque)
         {
             ThrusterOutputs = thrusterOutputs;
             ResultantForce = resultantForce;
