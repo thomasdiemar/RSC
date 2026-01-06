@@ -27,7 +27,7 @@ namespace RCS
         /// <summary>
         /// Stream progress snapshots mapped from solver outputs to resultant force/torque.
         /// </summary>
-        public IEnumerable<MyProgress<RcsEngineResult>> Optimise(RcsEngine engine, RcsCommand command)
+        public IEnumerable<MyProgress<RcsEngineResult>> Optimise(RcsEngine engine, RcsEngineOptimiserCommand command)
         {
             var orderedThrusters = engine.Thrusters.OrderBy(t => t.Key).ToList();
             var matrix = BuildCoefficientMatrix(orderedThrusters);
@@ -45,7 +45,7 @@ namespace RCS
         /// <summary>
         /// Construct desired per-axis targets (max/min or soft zero) based on command and thruster limits.
         /// </summary>
-        public Fraction[] BuildDesiredVector(RcsEngine engine, RcsCommand command)
+        public Fraction[] BuildDesiredVector(RcsEngine engine, RcsEngineOptimiserCommand command)
         {
             Fraction maxFx = 0, minFx = 0, maxFy = 0, minFy = 0, maxFz = 0, minFz = 0;
             Fraction maxTx = 0, minTx = 0, maxTy = 0, minTy = 0, maxTz = 0, minTz = 0;

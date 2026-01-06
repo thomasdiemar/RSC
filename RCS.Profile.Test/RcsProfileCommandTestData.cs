@@ -1,4 +1,4 @@
-﻿using LinearSolver;
+using LinearSolver;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -163,3 +163,4 @@ namespace RCS.Profile.Test
         }
     }
 }
+

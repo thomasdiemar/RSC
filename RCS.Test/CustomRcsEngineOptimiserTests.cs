@@ -101,7 +101,7 @@ namespace ThrusterOptimizationTests
         private void AssertOptimisersMatch(RcsVector<Fraction> desiredForce, RcsVector<Fraction> desiredTorque)
         {
             var engine = new RcsEngine(ThrusterTestData.CreateThrusters());
-            var command = new RcsCommand(desiredForce, desiredTorque, allowNonCommandedForces: true);
+            var command = new RcsEngineOptimiserCommand(desiredForce, desiredTorque, allowNonCommandedForces: true);
 
             var customResult = customOptimiser.Optimise(engine, command).Last().Result;
             var msfResult = msfOptimiser.Optimise(engine, command).Last().Result;
@@ -121,7 +121,7 @@ namespace ThrusterOptimizationTests
         private void AssertOptimisersMatch3Fx(RcsVector<Fraction> desiredForce, RcsVector<Fraction> desiredTorque)
         {
             var engine = new RcsEngine(ThrusterTestData.CreateThrusters3Fx());
-            var command = new RcsCommand(desiredForce, desiredTorque);
+            var command = new RcsEngineOptimiserCommand(desiredForce, desiredTorque);
 
             var customResult = customOptimiser.Optimise(engine, command).Last().Result;
             var msfResult = msfOptimiser.Optimise(engine, command).Last().Result;
@@ -147,7 +147,7 @@ namespace ThrusterOptimizationTests
         private void AssertOptimisersMatch3Opp(RcsVector<Fraction> desiredForce, RcsVector<Fraction> desiredTorque)
         {
             var engine = new RcsEngine(ThrusterTestData.CreateThrusters3opposite());
-            var command = new RcsCommand(desiredForce, desiredTorque);
+            var command = new RcsEngineOptimiserCommand(desiredForce, desiredTorque);
 
             var customResult = customOptimiser.Optimise(engine, command).Last().Result;
             var msfResult = msfOptimiser.Optimise(engine, command).Last().Result;
@@ -173,7 +173,7 @@ namespace ThrusterOptimizationTests
         private void AssertOptimisersMatch4Fx(RcsVector<Fraction> desiredForce, RcsVector<Fraction> desiredTorque)
         {
             var engine = new RcsEngine(ThrusterTestData.CreateThrusters4Fx());
-            var command = new RcsCommand(desiredForce, desiredTorque, allowNonCommandedForces: true, allowNonCommandedTorques: true);
+            var command = new RcsEngineOptimiserCommand(desiredForce, desiredTorque, allowNonCommandedForces: true, allowNonCommandedTorques: true);
 
             var customResult = customOptimiser.Optimise(engine, command).Last().Result;
             var msfResult = msfOptimiser.Optimise(engine, command).Last().Result;
@@ -199,7 +199,7 @@ namespace ThrusterOptimizationTests
         private void AssertOptimisersMatchRandom2Fx(RcsVector<Fraction> desiredForce, RcsVector<Fraction> desiredTorque)
         {
             var engine = new RcsEngine(ThrusterTestData.CreateThrustersRandom2Fx());
-            var command = new RcsCommand(desiredForce, desiredTorque, allowNonCommandedForces: true, allowNonCommandedTorques: true);
+            var command = new RcsEngineOptimiserCommand(desiredForce, desiredTorque, allowNonCommandedForces: true, allowNonCommandedTorques: true);
 
             var customResult = customOptimiser.Optimise(engine, command).Last().Result;
             var msfResult = msfOptimiser.Optimise(engine, command).Last().Result;
@@ -223,7 +223,7 @@ namespace ThrusterOptimizationTests
         private void AssertOptimisersMatchRandomFx(RcsVector<Fraction> desiredForce, RcsVector<Fraction> desiredTorque)
         {
             var engine = new RcsEngine(ThrusterTestData.CreateThrustersRandomFx());
-            var command = new RcsCommand(desiredForce, desiredTorque, allowNonCommandedForces: true, allowNonCommandedTorques: true);
+            var command = new RcsEngineOptimiserCommand(desiredForce, desiredTorque, allowNonCommandedForces: true, allowNonCommandedTorques: true);
 
             var customResult = customOptimiser.Optimise(engine, command).Last().Result;
             var msfResult = msfOptimiser.Optimise(engine, command).Last().Result;

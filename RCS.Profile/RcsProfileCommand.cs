@@ -17,7 +17,7 @@ namespace RCS.Profile
             DesiredTorque = desiredTorque;
         }
 
-        public static implicit operator RcsProfileCommand(RcsCommand command)
+        public static implicit operator RcsProfileCommand(RcsEngineOptimiserCommand command)
         {
             return new RcsProfileCommand(command.DesiredForce, command.DesiredTorque);
         }
